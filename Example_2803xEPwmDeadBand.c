@@ -34,7 +34,6 @@
 
 #include "DSP28x_Project.h"     // Device Headerfile and Examples Include File
 
-
 // Add protoypes of functions being used in the project here
 void MyInitGpio(void);
 void InitEPwm1Example(void);
@@ -58,7 +57,8 @@ Uint16  EPwm3_DB_Direction;
 
 // Maximum Duty values
 #define CPU_SYS_CLOCK 60000
-#define PWM_SWITCHING_FREQUENCY 200
+#define DT .5 //2us
+#define PWM_SWITCHING_FREQUENCY 40 //kHz
 #define PWM_PERIOD (CPU_SYS_CLOCK)/(PWM_SWITCHING_FREQUENCY) //200kHz
 #define ISR_CONTROL_FREQUENCY (PWM_SWITCHING_FREQUENCY)/(CNTRL_ISR_FREQ_RATIO)
 
@@ -73,10 +73,10 @@ Uint16 duty, incr_duty;
 #define DB_DOWN 0
 
 // define PWM parameters
-#define TBPRD_TBCLKs PWM_PERIOD    // Period = 900 TBCLK counts
-#define DT_TBCLKs 20        // dead time express in TBCLKs ticks
-#define PHDLY_TBCLKs 300    // Phase = 300/900 * 360 = 120 deg
-#define DUTY_TBCLKs 0     //duty=285/900=31.7%
+#define TBPRD_TBCLKs PWM_PERIOD/2    // Period = 900 TBCLK counts
+#define DT_TBCLKs CPU_SYS_CLOCK*DT/1000       // dead time express in TBCLKs ticks
+#define PHDLY_TBCLKs PWM_PERIOD/3    // Phase = 300/900 * 360 = 120 deg
+#define DUTY_TBCLKs PWM_PERIOD/10     //duty=285/900=31.7%
 
 void main(void)
 {
@@ -92,7 +92,10 @@ void main(void)
 
     // Connect ePWM1, ePWM2, ePWM3 to GPIO pins, so that in not necessary toggle function in ISR
     // These functions are in the F2806x_EPwm.c file
-    //MyInitGpio();
+    //InitEPwm1Gpio();
+    //InitEPwm2Gpio();
+    //InitEPwm3Gpio();
+    MyInitGpio();
 
     // Step 3. Clear all interrupts and initialize PIE vector table:
     // Disable CPU interrupts
@@ -126,18 +129,14 @@ void main(void)
     EDIS;    // This is needed to disable write to EALLOW protected registers
 
     // Step 4. Initialize all the Device Peripherals.
-
     // This function can be found in F2806x_CpuTimers.c
     InitCpuTimers();   // For this example, only initialize the Cpu Timers
-
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
     // 80MHz CPU Freq, 50 millisecond Period (in uSeconds)
-    ConfigCpuTimer(&CpuTimer0, 80, 500000);
-
+    ConfigCpuTimer(&CpuTimer0, 60, 500000);
     // To ensure precise timing, use write-only instructions to write to the entire register. Therefore, if any
     // of the configuration bits are changed in ConfigCpuTimer and InitCpuTimers (in F2806x_CpuTimers.h), the
     // below settings must also be updated.
-
     CpuTimer0Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
 
     // This function is found in F2806x_InitPeripherals.c
@@ -147,6 +146,9 @@ void main(void)
     SysCtrlRegs.PCLKCR0.bit.TBCLKSYNC = 0;
     EDIS;
 
+    InitEPwm1Example();
+    InitEPwm2Example();
+    InitEPwm3Example();
     InitEPwm3phInterleaved();
 
     EALLOW;
@@ -168,7 +170,7 @@ void main(void)
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
 
     // Initalize counters
-    incr_duty=0;
+    incr_duty=0; duty=0;
     EPwm1TimerIntCount = 0;
     EPwm2TimerIntCount = 0;
     EPwm3TimerIntCount = 0;
@@ -216,6 +218,7 @@ __interrupt void cpu_timer0_isr(void)
 
 __interrupt void epwm1_isr(void)
 {
+    EPwm1TimerIntCount++;
     // Clear INT flag for this timer
     EPwm1Regs.ETCLR.bit.INT = 1;
     // Acknowledge this interrupt to receive more interrupts from group 3
@@ -224,11 +227,7 @@ __interrupt void epwm1_isr(void)
 
 __interrupt void epwm2_isr(void)
 {
-
-    __asm("          NOP");
-
     EPwm2TimerIntCount++;
-
     // Clear INT flag for this timer
     EPwm2Regs.ETCLR.bit.INT = 1;
     // Acknowledge this interrupt to receive more interrupts from group 3
@@ -238,11 +237,7 @@ __interrupt void epwm2_isr(void)
 
 __interrupt void epwm3_isr(void)
 {
-
-    __asm("          NOP");
-
     EPwm3TimerIntCount++;
-
     // Clear INT flag for this timer
     EPwm3Regs.ETCLR.bit.INT = 1;
     // Acknowledge this interrupt to receive more interrupts from group 3
@@ -254,7 +249,7 @@ void UpdateDutyEPwm3phInterleaved(Uint16 duty)
 {
     EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
     // Counter Compare Submodule Registers
-    EPwm1Regs.CMPA.half.CMPA = (duty)/2;
+    EPwm1Regs.CMPA.half.CMPA =duty;
     EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
     EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
     // Action Qualifier SubModule Registers
@@ -262,14 +257,14 @@ void UpdateDutyEPwm3phInterleaved(Uint16 duty)
     EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
 
     EPwm2Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-    EPwm2Regs.CMPA.half.CMPA = (duty)/2;
+    EPwm2Regs.CMPA.half.CMPA = duty;
     EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
     EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
     EPwm2Regs.AQCTLA.bit.CAU = AQ_SET;
     EPwm2Regs.AQCTLA.bit.CAD = AQ_CLEAR;
 
     EPwm3Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-    EPwm3Regs.CMPA.half.CMPA = (duty)/2;
+    EPwm3Regs.CMPA.half.CMPA = duty;
     EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
     EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
     EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;
@@ -352,6 +347,7 @@ void InitEPwm3phInterleaved(void)
 
 void MyInitGpio(void)
 {
+    EALLOW;
     //--------------------------------------------------------------------------------------
     // GPIO (GENERAL PURPOSE I/O) CONFIG
     //--------------------------------------------------------------------------------------
@@ -439,11 +435,11 @@ void MyInitGpio(void)
     //  GpioDataRegs.GPACLEAR.bit.GPIO10 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO10 = 1;     // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
-    //  GPIO-11 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPAMUX1.bit.GPIO11 = 0;    // 0=GPIO,  1=EPWM6B,  2=LINRX-A,  3=Resv
-    GpioCtrlRegs.GPADIR.bit.GPIO11 = 0;     // 1=OUTput,  0=INput
+    //  GPIO-11 - PIN FUNCTION = gate driver reset disable
+    GpioCtrlRegs.GPAMUX1.bit.GPIO11 = 0;    // 0=GPIO RST,  1=EPWM6B,  2=LINRX-A,  3=Resv
+    GpioCtrlRegs.GPADIR.bit.GPIO11 = 1;     // 1=OUTput,  0=INput
     //  GpioDataRegs.GPACLEAR.bit.GPIO11 = 1;   // uncomment if --> Set Low initially
-    //  GpioDataRegs.GPASET.bit.GPIO11 = 1;     // uncomment if --> Set High initially
+    GpioDataRegs.GPASET.bit.GPIO11 = 1;     // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
     //  GPIO-12 - PIN FUNCTION = --Spare--
     GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 0;    // 0=GPIO,  1=TZ1,  2=SCITX-A,  3=SPISIMO-B
@@ -632,6 +628,36 @@ void MyInitGpio(void)
     //--------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------
     EDIS;   // Disable register access
+}
+
+
+void InitEPwm1Example()
+{
+
+
+    // Interrupt where we will change the Deadband
+    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
+    EPwm1Regs.ETSEL.bit.INTEN = 1;                // Enable INT
+    EPwm1Regs.ETPS.bit.INTPRD = ET_3RD;           // Generate INT on 3rd event
+}
+
+void InitEPwm2Example()
+{
+
+
+    // Interrupt where we will modify the deadband
+    EPwm2Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;      // Select INT on Zero event
+    EPwm2Regs.ETSEL.bit.INTEN = 1;                 // Enable INT
+    EPwm2Regs.ETPS.bit.INTPRD = ET_3RD;            // Generate INT on 3rd event
+}
+
+void InitEPwm3Example()
+{
+
+    // Interrupt where we will change the deadband
+    EPwm3Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;       // Select INT on Zero event
+    EPwm3Regs.ETSEL.bit.INTEN = 1;                  // Enable INT
+    EPwm3Regs.ETPS.bit.INTPRD = ET_3RD;             // Generate INT on 3rd event
 }
 //===========================================================================
 // No more.
