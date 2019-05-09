@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>test_booster</name>
+	<name>BSTIL</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -69,6 +69,11 @@
 			<name>DSP2803x_PieVect.c</name>
 			<type>1</type>
 			<locationURI>INSTALLROOT_2803x_V130/DSP2803x_common/source/DSP2803x_PieVect.c</locationURI>
+		</link>
+		<link>
+			<name>DSP2803x_Sci.c</name>
+			<type>1</type>
+			<location>C:/ti/controlSUITE/device_support/f2803x/v130/DSP2803x_common/source/DSP2803x_Sci.c</location>
 		</link>
 		<link>
 			<name>DSP2803x_SysCtrl.c</name>
