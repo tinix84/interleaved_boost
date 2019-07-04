@@ -47,7 +47,7 @@ class HWRCommunication:
         file = open(commands_fn, 'r')
         enum_in = file.read()
         file.close()
-        # regulat expression
+        # regular expression
         data_re = re.compile(r' {4}(?P<name>\w+) = (?P<data>\d+)')
         data_re_iter = data_re.finditer(enum_in)
         for data in data_re_iter:
@@ -98,29 +98,6 @@ class HWRCommunication:
         else:
             print('receive checksum error')
         return data
-        
-    # def unpackFrameMulti(self, frame_bytes):
-        # command = int(frame_bytes[1])
-        # length = int(frame_bytes[2])
-        # data_bytes = frame_bytes[3:-1]
-        # # perform checksum calculation
-        # checksum = 0
-        # for b in frame_bytes[:-1]:
-            # checksum = checksum ^ b 
-        
-        # if checksum == frame_bytes[-1]:
-            # if command == self.commands_dict['multi']:
-                # data = list()
-                # while(len(data_bytes) > 4):
-                    # data.append(self.bytesToFloat(data_bytes[1:5])[0])
-                    # data_bytes = data_bytes[5:]            
-            # else:
-                # if length == 4:
-                    # data = self.bytesToFloat(data_bytes)[0]
-                # else:
-                    # data = None
-                    # print('unpack error')
-        # return data
 
 
     def transmitReceiveFrame(self, frame_bytes):
@@ -153,80 +130,6 @@ class HWRCommunication:
             print('Command error!')
             ret = None
         return ret
-  
-    # def sendMulti(self, command_list, data_list):
-        
-        # comdata = bytes()
-        
-        # for command, data in zip(command_list, data_list):
-            # if any(command in s for s in list(self.commands_dict.keys())):
-                    # comdata = comdata + self.commands_dict[command].to_bytes(1, 'big') + self.flaotToBytes(float(data))
-            # else:
-                # print('Command error!')   
-        # #print(comdata.hex())        
-        # frame_bytes = self.packFrame('multi', comdata)
-        # #frame_bytes = self.packFrame('echo', comdata)
-        # #print(frame_bytes.hex())
-        # response_bytes  = self.transmitReceiveFrame(frame_bytes)
-        # #print(response_bytes.hex())
-        # ret = self.unpackFrameMulti(response_bytes)        #ret=0
-        # return ret
-
-
-# def test(hwr):
-    
-    # for command in hwr.commands_dict:
-        # if command != 'multi':
-            # if 'get' in str(command):
-                # # getter command
-                # resp = hwr.send(command)
-                # print('comm:{}, resp: {}'.format(str(command), resp))
-            # if ('Enable' in str(command)) or ('Disable' in str(command)):
-                # resp = hwr.send(command)
-                # print('comm:{},resp: {}'.format(str(command), resp))
-            # if 'DutyCycle' in str(command):
-                # resp = hwr.send(command, 0.2)
-                # print('comm:{}, resp: {}'.format(str(command), resp))
-
-
-# def testMulti(hwr):
-    # #del hwr.commands_dict['multi']
-    # cmds = list()
-    # dta = list()
-    # for command in hwr.commands_dict:
-        # if command != 'multi':
-            # # if 'get' in str(command):
-                # # cmds.append(command)
-                # # dta.append(0.0)
-            # if ('Enable' in str(command)) or ('Disable' in str(command)):
-                # cmds.append(command)
-                # dta.append(0.0)
-            # # if 'DutyCycle' in str(command):
-                # # cmds.append(command)
-                # # dta.append(0.2)
-    # # print(len(cmds)*5)
-    # # print(cmds)
-    # resp = hwr.sendMulti(cmds, dta)
-    # print(resp)
-    # for cmd , dta in zip(cmds, resp):
-        # print('comm:{}, resp: {}'.format(cmd, dta))
-    
-    
-# def getAllMulti(hwr):
-    # cmds = list()
-    # dta = list()
-    # for command in hwr.commands_dict:
-        # if 'get' in str(command):
-            # cmds.append(command)
-            # dta.append(0.0)
-    # resp = hwr.sendMulti(cmds, dta)
-    # if resp:
-        # strng = ''
-        # for cmd , dta in zip(cmds, resp):
-            # #print('{0} = {1}{2:2.3f}'.format(cmd,(20-len(cmd))*' ',  dta))
-            # strng = strng + '{0} = {1}{2:2.3f}\n'.format(cmd,(20-len(cmd))*' ',  dta)
-        # os.system('cls')
-        # print(strng)
         
 def getAll(hwr):
     strng = ''
