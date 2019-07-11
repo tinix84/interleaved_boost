@@ -66,8 +66,11 @@ static int32_t device_initDAC(void);
 static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx);
 static int32_t device_initSCI(void);
 static int32_t device_initEPWM(void);
+static int32_t device_initEPWM3phInterleaved(void);
+static int32_t device_initEPWM3phNIBBSpecialModulation(void);
 static int32_t device_initADC(void);
 static int32_t device_initGPIO(void);
+static int32_t device_initGPIO3phInterleaved(void);
 void __error__(char *filename, uint32_t line);
 
 
@@ -413,6 +416,174 @@ static int32_t device_initEPWM(void)
     return NO_ERROR;
 }
 
+static int32_t device_initEPWM3phInterleaved(void)
+{
+    //=====================================================================
+    // Config
+    // Initialization Time
+    //===========================================================================
+    // EPWM Module 1 config
+    EPwm1Regs.TBPRD = EPWM_A_INIT_PERIOD; // Period = 900 TBCLK counts
+    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Master module
+    EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO; // Sync down-stream module
+    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM1A
+    EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
+    
+        // EPWM Module 2 config
+    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
+    EPwm2Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
+    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
+    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+    EPwm2Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
+    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
+    EPwm2Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+
+    // EPWM Module 3 config
+    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
+    EPwm3Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
+    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
+    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+    EPwm3Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
+    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
+    EPwm3Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+    
+    // EPWM Module 3 config
+
+    // Run Time (Note: Example execution of one run-time instant)
+    //===========================================================
+    EPwm1Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
+    EPwm2Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+    EPwm3Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+
+    return NO_ERROR;
+}
+
+static int32_t device_initEPWM3phNIBBSpecialModulation(void)
+{
+    // This modulation is used by inverted power has suggestion,
+    // is similar to a NIBB but the PH1 and PH3 are never overlapping (L store energy)
+    // the phase PH1/PH2 are interleaving
+    
+    // EPWM Module 1 config
+    EPwm1Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
+    EPwm1Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = TBCLK counts
+    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND; // adjust duty for output EPWM1A
+    EPwm1Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
+
+    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Phase loading disabled
+
+
+    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
+    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+
+    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+    EPwm1Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+
+    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+    EPwm1Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm1Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+
+    // EPWM Module 2 config
+    EPwm2Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
+    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 1401 TBCLK counts
+    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+    EPwm2Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+
+    EPwm2Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
+
+    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN;
+
+    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
+    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+
+    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+    EPwm2Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+
+    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+
+    // EPWM Module 3 config
+    EPwm3Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP;
+    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 801 TBCLK counts
+    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+    EPwm3Regs.CMPB = EPWM_B_INIT_PERIOD-(2*EPWM_A_INIT_CMPA); // adjust duty for output EPWM3A
+
+    EPwm3Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
+    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+
+
+    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;
+    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+
+    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;
+    EPwm3Regs.AQCTLA.bit.CBU = AQ_CLEAR;
+
+    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+}
 
 /* sciaRXFIFOISR - SCIA Receive FIFO ISR */
 __interrupt void sciaRXISR(void)
@@ -729,7 +900,10 @@ static int32_t device_initGPIO(void)
     return NO_ERROR;
 }
 
-
+static int32_t device_initGPIO3phInterleaved(void)
+{
+    EALLOW;
+}
 
 void updateDutyEPwm(uint16_t duty)
 {
