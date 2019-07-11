@@ -387,6 +387,11 @@ static int32_t device_initEPWM(void)
 //    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
 //    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
 
+    // ADC trigger
+    EPwm1Regs.ETSEL.bit.SOCAEN   = 1;
+    EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_ZERO;
+    EPwm1Regs.ETPS.bit.SOCAPRD   = ET_1ST;
+
     // EPWM Module 2 config
     EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
     EPwm2Regs.TBPHS.half.TBPHS = EPWM_B_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
@@ -606,17 +611,32 @@ __interrupt void sciaRXISR(void)
 static int32_t device_initADC(void)
 {
 
-    // ADC CALIBRATION
-    //---------------------------------------------------
-    // The Device_cal function, which copies the ADC & oscillator calibration values
-    // from TI reserved OTP into the appropriate trim registers, occurs automatically
-    // in the Boot ROM. If the boot ROM code is bypassed during the debug process, the
-    // following function MUST be called for the ADC and oscillators to function according
-    // to specification.
+     // Assumes ADC clock is already enabled in InitSysCtrl();
 
-    SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1; // Enable ADC peripheral clock
-    (*Device_cal)();                      // Auto-calibrate from TI OTP
-    SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 0; // Return ADC clock to original state
+    //
+    // Call the InitAdc function in the DSP2803x_Adc.c file
+    //
+    // This function calibrates and powers up the ADC to
+    // into a known state.
+    //
+    InitAdc();
+    AdcOffsetSelfCal();
+
+    EALLOW;
+    AdcRegs.ADCCTL1.bit.INTPULSEPOS  = 1;    //ADCINT1 trips after AdcResults latch
+    AdcRegs.INTSEL1N2.bit.INT1E      = 1;    //Enabled ADCINT1
+    AdcRegs.INTSEL1N2.bit.INT1CONT   = 0;    //Disable ADCINT1 Continuous mode
+    AdcRegs.INTSEL1N2.bit.INT1SEL    = 2;    //setup EOC2 to trigger ADCINT1 to fire
+    AdcRegs.ADCSOC0CTL.bit.CHSEL     = 4;    //set SOC0 channel select to ADCINA4(dummy sample for rev0 errata workaround)
+    AdcRegs.ADCSOC1CTL.bit.CHSEL     = 4;    //set SOC1 channel select to ADCINA4
+    AdcRegs.ADCSOC2CTL.bit.CHSEL     = 2;    //set SOC2 channel select to ADCINA2
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL   = 5;    //set SOC0 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
+    AdcRegs.ADCSOC1CTL.bit.TRIGSEL   = 5;    //set SOC1 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
+    AdcRegs.ADCSOC2CTL.bit.TRIGSEL   = 5;    //set SOC2 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
+    AdcRegs.ADCSOC0CTL.bit.ACQPS     = 6;    //set SOC0 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
+    AdcRegs.ADCSOC1CTL.bit.ACQPS     = 6;    //set SOC1 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
+    AdcRegs.ADCSOC2CTL.bit.ACQPS     = 6;    //set SOC2 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
+    EDIS;
 
     return NO_ERROR;
 }

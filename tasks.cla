@@ -1,0 +1,78 @@
+//###########################################################################
+// Description:
+//
+// Task 1: Calculate the square root of a number using
+// multiple iterations of the Newton-Raphson approximation
+//
+//###########################################################################
+// $TI Release: F2803x C/C++ Header Files and Peripheral Examples V130 $
+// $Release Date: May  8, 2015 $
+// $Copyright: Copyright (C) 2009-2015 Texas Instruments Incorporated -
+//             http://www.ti.com/ ALL RIGHTS RESERVED $
+//###########################################################################
+
+#include "DSP28x_Project.h"
+// Include the test header file whose name is based on the test name
+// which is defined by the macro TEST on the command line
+#include "shared.h"
+#include "DCL.h"
+#include <stdint.h>
+
+/* PWM data */
+uint32_t actual_duty_cnt_cla;
+uint16_t result_adc;
+
+#pragma DATA_SECTION(ref_value,          "CpuToCla1MsgRAM");
+float32 ref_value;
+
+PI pi;
+
+//Task 1 : init task
+__interrupt void Cla1Task1 ( void )
+{
+    pi.Kp = 1.0;       // [0] proportional gain
+    pi.Ki = 0.0;       // [2] integral gain
+    pi.i10 = 0.0;      // [4] I storage
+    pi.Umax = 1.0;     // [6] upper saturation limit
+    pi.Umin = -1.0;        // [8] lower saturation limit
+    pi.i6 = 1.0;       // [A] saturation storage
+
+    actual_duty_cnt_cla = 0;
+    result_adc = 0;
+    ref_value = 0;
+}
+
+__interrupt void Cla1Task2 ( void )
+{
+    result_adc = AdcResult.ADCRESULT1;
+    actual_duty_cnt_cla = DCL_runPIc(&pi, ref_value, (float)result_adc);
+    // Run Time (Note: Example execution of one run-time instant)
+    //===========================================================
+    EPwm1Regs.CMPA.half.CMPA = actual_duty_cnt_cla; // adjust duty for output EPWM1A
+    EPwm2Regs.CMPA.half.CMPA = actual_duty_cnt_cla; // adjust duty for output EPWM2A
+}
+__interrupt void Cla1Task3 ( void )
+{
+	
+}
+__interrupt void Cla1Task4 ( void )
+{
+	
+}
+__interrupt void Cla1Task5 ( void )
+{
+	
+}
+__interrupt void Cla1Task6 ( void )
+{
+	
+}
+__interrupt void Cla1Task7 ( void )
+{
+	
+}
+__interrupt void Cla1Task8 ( void )
+{
+	
+}
+
