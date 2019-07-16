@@ -3,6 +3,6 @@
 <projectOptions>
 	<deviceFamily value="C2000"/>
 	<isTargetManual value="true"/>
-	<origin value="C:/ti/controlSUITE/device_support/f2803x/v130/DSP2803x_examples_ccsv5/epwm_deadband"/>
-	<connection value="common/targetdb/connections/TIXDS100v2_Connection.xml"/>
+	<origin value="D:/OneDrive - NTB/workspace_v8/ILBST"/>
+	<connection value="common/targetdb/connections/TIXDS100usb_Connection.xml"/>
 </projectOptions>

@@ -14,42 +14,47 @@
 #include "DSP28x_Project.h"
 // Include the test header file whose name is based on the test name
 // which is defined by the macro TEST on the command line
-#include "shared.h"
 #include "DCL.h"
 #include <stdint.h>
+#include "CLAshared.h"
 
-/* PWM data */
-uint32_t actual_duty_cnt_cla;
-uint16_t result_adc;
 
-#pragma DATA_SECTION(ref_value,          "CpuToCla1MsgRAM");
-float32 ref_value;
-
-PI pi;
-
-//Task 1 : init task
 __interrupt void Cla1Task1 ( void )
 {
-    pi.Kp = 1.0;       // [0] proportional gain
-    pi.Ki = 0.0;       // [2] integral gain
-    pi.i10 = 0.0;      // [4] I storage
-    pi.Umax = 1.0;     // [6] upper saturation limit
-    pi.Umin = -1.0;        // [8] lower saturation limit
-    pi.i6 = 1.0;       // [A] saturation storage
+    EPwm4Regs.AQCSFRC.bit.CSFA = 2;
+     //Spannungssolwerte übernehmen
 
-    actual_duty_cnt_cla = 0;
-    result_adc = 0;
-    ref_value = 0;
+     //Current Controller Buck 1
+     cla_Iout1 = AdcResult.ADCRESULT0;
+ //    run_I_CONTROLLER_CLA_MACRO(i1_Curr, cla_Iref1, cla_Iout1);
+ //    cla_Ramp1_Curr = i1_Curr.ys;
+
+     //Voltage Controller Buck 1
+     cla_Vout1 = AdcResult.ADCRESULT1;
+ //    cla_Ramp1_Volt = DCL_runPI_L2(&pi1_Volt, cla_Ramp1_Curr, cla_Vout1);
+ //    Comp1Regs.RAMPMAXREF_SHDW = 65536 * cla_Ramp1_Volt;
+
+     //Current Controller Buck 2
+     cla_Iout2 = AdcResult.ADCRESULT2;
+ //    run_I_CONTROLLER_CLA_MACRO(i2_Curr, cla_Iref2, cla_Iout2);
+ //    cla_Ramp2_Curr = i2_Curr.ys;
+
+     //Voltage Controller Buck 2
+     cla_Vout2 = AdcResult.ADCRESULT3;
+ //    cla_Ramp2_Volt = DCL_runPI_L2(&pi2_Volt, cla_Ramp2_Curr, cla_Vout2);
+ //    Comp2Regs.RAMPMAXREF_SHDW = 65536 * cla_Ramp2_Volt;
+
+     //Current Controller Buck 3
+     cla_Iout3 = AdcResult.ADCRESULT4;
+ //    run_I_CONTROLLER_CLA_MACRO(i3_Curr, cla_Iref3, cla_Iout3);
+ //    cla_Ramp3_Curr = i3_Curr.ys;
+
+     EPwm4Regs.AQCSFRC.bit.CSFA = 1;
 }
 
 __interrupt void Cla1Task2 ( void )
 {
-    result_adc = AdcResult.ADCRESULT1;
-    actual_duty_cnt_cla = DCL_runPIc(&pi, ref_value, (float)result_adc);
-    // Run Time (Note: Example execution of one run-time instant)
-    //===========================================================
-    EPwm1Regs.CMPA.half.CMPA = actual_duty_cnt_cla; // adjust duty for output EPWM1A
-    EPwm2Regs.CMPA.half.CMPA = actual_duty_cnt_cla; // adjust duty for output EPWM2A
+
 }
 __interrupt void Cla1Task3 ( void )
 {
@@ -71,8 +76,21 @@ __interrupt void Cla1Task7 ( void )
 {
 	
 }
+
+//Task 8 : init task
 __interrupt void Cla1Task8 ( void )
 {
-	
+    pi1_Volt.Kp = 0.22f;
+    pi1_Volt.Ki = 0.015f; //472500.0f / 200e3;
+    pi1_Volt.Umax = 0.96130371f;
+    pi1_Volt.Umin = 0.05f;
+    pi1_Volt.i10 = 1.0f;
+    pi1_Volt.i6 = 1.0f;
+
+
+//    init_I_CONTROLLER(&i1_Curr, cla_CC_Ki, cla_CC_Kr, 0.0f, cla_Vref1);
+//    init_I_CONTROLLER(&i2_Curr, cla_CC_Ki, cla_CC_Kr, 0.0f, cla_Vref2);
+//    init_I_CONTROLLER(&i3_Curr, cla_CC_Ki, cla_CC_Kr, 0.0f, cla_Vref3);
 }
+
 

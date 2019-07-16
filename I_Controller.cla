@@ -1,0 +1,35 @@
+/*
+ * I_Controller.c
+ *
+ *  Created on: 18.02.2019
+ *      Author: sklammer
+ */
+
+#include "I_Controller.h"
+
+void init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, float max)
+{
+    cntl->Vi =V_i;       //!< Integral Gain
+    cntl->Vr =V_r;       //!< Gain from Feedback (Saturation)
+    cntl->u = 0;        //!< Input
+    cntl->e = 0;        //!< Saturation Difference
+    cntl->y = 0;        //!< unsaturated Output
+    cntl->ys = 0;       //!< saturated Output
+    cntl->sat_min = min;  //!< Lower saturation limit
+    cntl->sat_max = max;  //!< Upper saturation limit
+}
+
+float run_I_CONTROLLER(I_CONTROLLER *cntl, float ref, float value)
+{
+    cntl->u = ref - value;
+    cntl->e = cntl->ys - cntl->y;
+
+    cntl->y = cntl->y1 + cntl->Vi * cntl->u + cntl->Vr * cntl->e;
+
+    cntl->ys = __mmaxf32(cntl->y, cntl->sat_min);
+    cntl->ys = __mminf32(cntl->ys, cntl->sat_max);
+
+    cntl->y1 = cntl->y;
+
+    return cntl->ys;
+}

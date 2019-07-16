@@ -23,10 +23,11 @@
 #include "device.h"
 #include "defines.h"
 //#include "ringbuffer.h"
+
 #include "DSP2803x_Cla_typedefs.h"// DSP2803x CLA Type definitions
-
+#include "CLAShared.h"
 #include "DSP2803x_Device.h"      // DSP2803x Headerfile Include File
-
+#include "DSP2803x_Adc.h"
 
 /* ==================================================================== */
 /* ============================ constants ============================= */
@@ -63,6 +64,7 @@ static int32_t device_initCPUTimer(void);
 static int32_t device_initCPUMemory(void);
 static int32_t device_initClocks(void);
 static int32_t device_initDAC(void);
+static int32_t device_initCLA(void);
 static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx);
 static int32_t device_initSCI(void);
 static int32_t device_initEPWM(void);
@@ -80,6 +82,8 @@ void __error__(char *filename, uint32_t line);
 /* ==================================================================== */
 
 __interrupt void cpu_timer0_isr(void);
+__interrupt void cpu_timer1_isr(void);
+__interrupt void AdcInterruptISR(void);
 //__interrupt void sciaTxIsr(void);
 __interrupt void sciaRXISR(void);
 __interrupt void ISR_ILLEGAL(void);
@@ -106,17 +110,17 @@ int32_t device_init(void)
     /* Initialize board related peripherals */
     // Connect ePWM1, ePWM2, ePWM3 to GPIO pins, so that in not necessary toggle function in ISR
     device_initGPIO();
-    // Setup only the GPI/O only for SCI-A and SCI-B functionality
-    // This function is found in DSP2803x_Sci.c
-    InitSciaGpio();
+
+    /* Initialize the CLA Memory */
+    device_initCLA();
 
     /* Init CPU Timers */
     device_initCPUTimer();
+    ConfigCpuTimer(&CpuTimer1, 60, 100);   //CPU Timer 1 interrupt after 0.5 ms (at 60MHz CPU freq.)
 
     /* Init watchdog */
     //    device_initWatchdog();
 
-    /* Initialize the CLA Memory */
 
     /* Initialize all peripherals */
     device_initSCI();
@@ -139,30 +143,23 @@ int32_t device_init(void)
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.SCIRXINTA = &sciaRXISR;
     //PieVectTable.SCITXINTA = &sciaTxIsr;
+
+    PieVectTable.ADCINT1 = &AdcInterruptISR;
     PieVectTable.TINT0 = &cpu_timer0_isr;
-    EDIS;    // This is needed to disable write to EALLOW protected registers
+    PieVectTable.TINT1 = &cpu_timer1_isr;
 
-    // Enable CPU INT1 which is connected to CPU-Timer 0:
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;          // ADCINT1
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;          // TINT0
+
     IER |= M_INT1;
-    // Enable TINT0 in the PIE: Group 1 interrupt 7
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
-    // Enable CPU INT3 which is connected to EPWM1-3 INT:
-    IER |= M_INT3;
-    // Enable EPWM INTn in the PIE: Group 3 interrupt 1-3
-    PieCtrlRegs.PIEIER3.bit.INTx1 = 1;
-    PieCtrlRegs.PIEIER3.bit.INTx2 = 1;
-    PieCtrlRegs.PIEIER3.bit.INTx3 = 1;
+    IER |= M_INT13;
 
-    // Enable interrupts required for this example
-    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;   // Enable the PIE block
-    PieCtrlRegs.PIEIER9.bit.INTx1=1;     // PIE Group 9, INT1
-    PieCtrlRegs.PIEIER9.bit.INTx2=1;     // PIE Group 9, INT2
-    IER = 0x100; // Enable CPU INT
-    EINT;
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;   // Enable Global interrupt INTM
     ERTM;   // Enable Global realtime interrupt DBGM
+    EDIS;    // This is needed to disable write to EALLOW protected registers
+
 
     // Initialize counters
 
@@ -176,6 +173,36 @@ static int32_t device_initSysCtl(void)
 {
     // PLL, WatchDog, enable Peripheral Clocks
     InitSysCtrl();
+
+    return NO_ERROR;
+}
+
+static int32_t device_initCLA(void)
+{
+    // Copy CLA code from its load address to CLA program RAM
+    //
+    // Note: during debug the load and run addresses can be
+    // the same as Code Composer Studio can load the CLA program
+    // RAM directly.
+    //
+    // The ClafuncsLoadStart, Cla1funcsLoadSize, and ClafuncsRunStart
+    // symbols are created by the linker.
+    memcpy((uint16_t *)&Cla1funcsRunStart,(uint16_t *)&Cla1funcsLoadStart, (unsigned long)&Cla1funcsLoadSize);
+
+    // Initialize the CLA registers
+    EALLOW;
+    Cla1Regs.MVECT1 = (Uint16)((Uint32)&Cla1Task1 -(Uint32)&Cla1Prog_Start);
+    Cla1Regs.MVECT7 = (Uint16)((Uint32)&Cla1Task7 -(Uint32)&Cla1Prog_Start);
+    Cla1Regs.MVECT8 = (Uint16)((Uint32)&Cla1Task8 -(Uint32)&Cla1Prog_Start);
+    Cla1Regs.MPISRCSEL1.bit.PERINT1SEL  = CLA_INT1_ADCINT1;
+    Cla1Regs.MMEMCFG.bit.PROGE = 1;          // Map CLA program memory to the CLA
+    Cla1Regs.MMEMCFG.bit.RAM0E   = 1;
+    Cla1Regs.MMEMCFG.bit.RAM1E   = 1;
+    Cla1Regs.MCTL.bit.IACKE = 1;             // Enable IACK to start tasks via software
+    Cla1Regs.MIER.all = (M_INT8 | M_INT7 | M_INT1);   // Enable Task 8 , Task 7 and Task 1
+    EDIS;
+
+    Cla1ForceTask8andWait();
 
     return NO_ERROR;
 }
@@ -588,6 +615,8 @@ static int32_t device_initEPWM3phNIBBSpecialModulation(void)
     EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
     EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
     EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+
+    return NO_ERROR;
 }
 
 /* sciaRXFIFOISR - SCIA Receive FIFO ISR */
@@ -623,20 +652,70 @@ static int32_t device_initADC(void)
     AdcOffsetSelfCal();
 
     EALLOW;
-    AdcRegs.ADCCTL1.bit.INTPULSEPOS  = 1;    //ADCINT1 trips after AdcResults latch
-    AdcRegs.INTSEL1N2.bit.INT1E      = 1;    //Enabled ADCINT1
-    AdcRegs.INTSEL1N2.bit.INT1CONT   = 0;    //Disable ADCINT1 Continuous mode
-    AdcRegs.INTSEL1N2.bit.INT1SEL    = 2;    //setup EOC2 to trigger ADCINT1 to fire
-    AdcRegs.ADCSOC0CTL.bit.CHSEL     = 4;    //set SOC0 channel select to ADCINA4(dummy sample for rev0 errata workaround)
-    AdcRegs.ADCSOC1CTL.bit.CHSEL     = 4;    //set SOC1 channel select to ADCINA4
-    AdcRegs.ADCSOC2CTL.bit.CHSEL     = 2;    //set SOC2 channel select to ADCINA2
-    AdcRegs.ADCSOC0CTL.bit.TRIGSEL   = 5;    //set SOC0 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
-    AdcRegs.ADCSOC1CTL.bit.TRIGSEL   = 5;    //set SOC1 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
-    AdcRegs.ADCSOC2CTL.bit.TRIGSEL   = 5;    //set SOC2 start trigger on EPWM1A, due to round-robin SOC0 converts first then SOC1, then SOC2
-    AdcRegs.ADCSOC0CTL.bit.ACQPS     = 6;    //set SOC0 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
-    AdcRegs.ADCSOC1CTL.bit.ACQPS     = 6;    //set SOC1 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
-    AdcRegs.ADCSOC2CTL.bit.ACQPS     = 6;    //set SOC2 S/H Window to 7 ADC Clock Cycles, (6 ACQPS plus 1)
+    SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1;
     EDIS;
+
+    EALLOW;
+    AdcRegs.ADCCTL1.bit.ADCBGPWD  = 1;      // Power ADC BandGap
+    AdcRegs.ADCCTL1.bit.ADCREFPWD = 1;      // Power reference
+    AdcRegs.ADCCTL1.bit.ADCPWDN   = 1;      // Power ADC
+    AdcRegs.ADCCTL1.bit.ADCENABLE = 1;      // Enable ADC
+    AdcRegs.ADCCTL1.bit.ADCREFSEL = 0;      // Select internal BandGap
+    EDIS;
+
+
+    DELAY_US(ADC_usDELAY);         // Delay before converting ADC channels
+    EALLOW;
+    AdcRegs.ADCCTL2.bit.CLKDIV2EN = 0;  // ADC Clock - 60 MHz
+    EDIS;
+    DELAY_US(ADC_usDELAY);         // Delay before converting ADC channels
+
+ //   AdcOffsetSelfCal();
+
+    // Configure ADC
+    EALLOW;
+    AdcRegs.ADCCTL2.bit.ADCNONOVERLAP = 1;  // Enable non-overlap mode
+    AdcRegs.ADCCTL1.bit.INTPULSEPOS = 1;    // ADCINT1 trips after AdcResults latch
+    AdcRegs.INTSEL1N2.bit.INT1E     = 1;    // Enabled ADCINT1
+    AdcRegs.INTSEL1N2.bit.INT1SEL   = 1;    // setup EOC1 to trigger ADCINT1 to fire
+
+    AdcRegs.ADCINTFLG.bit.ADCINT1 = 0;      // clear interrupt flag for ADCINT1
+    AdcRegs.INTSEL1N2.bit.INT1CONT = 0;     // set ADCInterrupt 1 to auto clr
+    AdcRegs.ADCINTSOCSEL1.all = 0x0000;     // No ADCInterrupt will trigger SOCx
+    AdcRegs.ADCINTSOCSEL2.all = 0x0000;
+    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN0 = 1;
+    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN2 = 1;
+    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN4 = 1;
+
+    AdcRegs.ADCSOC0CTL.bit.CHSEL    = 1;    // A1 - I1_Slow 1
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC1CTL.bit.CHSEL    = 9;    // B1 -  Vout1 9
+    AdcRegs.ADCSOC1CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC1CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC2CTL.bit.CHSEL    = 3;    // A3 - I2_Slow 3
+    AdcRegs.ADCSOC2CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC2CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC3CTL.bit.CHSEL    = 11;    // B3 -  Vout2 11
+    AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC3CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC4CTL.bit.CHSEL    = 7;   // A7 - I3_Slow 7
+    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 15;    // B7 -  Vout3 15
+    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC6CTL.bit.CHSEL    = 10;    // B2 -  Vout LLC
+    AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC6CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    EDIS;
+
 
     return NO_ERROR;
 }
@@ -917,12 +996,16 @@ static int32_t device_initGPIO(void)
     //--------------------------------------------------------------------------------------
     EDIS;
 
+    // Setup only the GPI/O only for SCI-A and SCI-B functionality
+    // This function is found in DSP2803x_Sci.c
+    InitSciaGpio();
+
     return NO_ERROR;
 }
 
 static int32_t device_initGPIO3phInterleaved(void)
 {
-    EALLOW;
+    return NO_ERROR;
 }
 
 void updateDutyEPwm(uint16_t duty)
@@ -937,25 +1020,42 @@ void updateDutyEPwm(uint16_t duty)
 __interrupt void cpu_timer0_isr(void)
 {
     CpuTimer0.InterruptCount++;
-    // Toggle GPIO34 once per 500 milliseconds
-
+    GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1; // Toggle GPIO34 once per 500 milliseconds
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-
-
-
-/* Error handling function to be called when an ASSERT is violated */
-void __error__(char *filename, uint32_t line)
+// interrupt routine for led blinking
+__interrupt void cpu_timer1_isr(void)
 {
-    //
-    // An ASSERT condition was evaluated as false. You can use the filename and
-    // line parameters to determine what went wrong.
-    //
-    ESTOP0;
+    extern uint16_t Timer1IntFlg;
+
+    Timer1IntFlg = 1;
+    // The CPU acknowledges the interrupt.
 }
+
+__interrupt void AdcInterruptISR(void) {
+    GpioDataRegs.GPASET.bit.GPIO18 = 1;
+
+
+    GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;
+
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+    return;
+}
+
+
+///* Error handling function to be called when an ASSERT is violated */
+//void __error__(char *filename, uint32_t line)
+//{
+//    //
+//    // An ASSERT condition was evaluated as false. You can use the filename and
+//    // line parameters to determine what went wrong.
+//    //
+//    ESTOP0;
+//}
 
 
 __interrupt void ISR_ILLEGAL(void)   // Illegal operation TRAP
