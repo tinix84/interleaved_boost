@@ -21,35 +21,22 @@
 
 __interrupt void Cla1Task1 ( void )
 {
-    EPwm4Regs.AQCSFRC.bit.CSFA = 2;
-     //Spannungssolwerte übernehmen
 
-     //Current Controller Buck 1
+     //Current Controller Phase_1
      cla_Iout1 = AdcResult.ADCRESULT0;
- //    run_I_CONTROLLER_CLA_MACRO(i1_Curr, cla_Iref1, cla_Iout1);
- //    cla_Ramp1_Curr = i1_Curr.ys;
 
-     //Voltage Controller Buck 1
+     //Voltage Controller Vin
      cla_Vout1 = AdcResult.ADCRESULT1;
- //    cla_Ramp1_Volt = DCL_runPI_L2(&pi1_Volt, cla_Ramp1_Curr, cla_Vout1);
- //    Comp1Regs.RAMPMAXREF_SHDW = 65536 * cla_Ramp1_Volt;
 
-     //Current Controller Buck 2
+     //Current Controller Phase_2
      cla_Iout2 = AdcResult.ADCRESULT2;
- //    run_I_CONTROLLER_CLA_MACRO(i2_Curr, cla_Iref2, cla_Iout2);
- //    cla_Ramp2_Curr = i2_Curr.ys;
 
-     //Voltage Controller Buck 2
+     //Voltage Controller Vout
      cla_Vout2 = AdcResult.ADCRESULT3;
- //    cla_Ramp2_Volt = DCL_runPI_L2(&pi2_Volt, cla_Ramp2_Curr, cla_Vout2);
- //    Comp2Regs.RAMPMAXREF_SHDW = 65536 * cla_Ramp2_Volt;
 
-     //Current Controller Buck 3
+     //Current Controller Phase_3
      cla_Iout3 = AdcResult.ADCRESULT4;
- //    run_I_CONTROLLER_CLA_MACRO(i3_Curr, cla_Iref3, cla_Iout3);
- //    cla_Ramp3_Curr = i3_Curr.ys;
 
-     EPwm4Regs.AQCSFRC.bit.CSFA = 1;
 }
 
 __interrupt void Cla1Task2 ( void )

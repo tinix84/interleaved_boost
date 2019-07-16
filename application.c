@@ -146,7 +146,7 @@ int32_t application_processFrame(commSerialFrame_t *frame)
     extern uint32_t actual_pwm_period;
     extern uint32_t actual_phdly_cnt;
     extern uint32_t actual_deadtime_cnt;
-    extern uint32_t foo2;
+    extern uint32_t new_deadtime_ns;
 
     uint32_t new_duty_cnt = 0;
     uint32_t new_pwm_period = 0;
@@ -226,8 +226,8 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             break;
 
         case setDeadtime:
-            foo2 = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
-            new_deadtime_cnt = (uint32_t)( foo2 / EPWM_CLK_PERIOD_NS);
+            new_deadtime_ns = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
+            new_deadtime_cnt = (uint32_t)( new_deadtime_ns / EPWM_CLK_PERIOD_NS);
             EPwm1Regs.DBFED = (uint16_t)new_deadtime_cnt;
             EPwm1Regs.DBRED = (uint16_t)new_deadtime_cnt;
             EPwm2Regs.DBFED = (uint16_t)new_deadtime_cnt;; // FED = 20 TBCLKs

@@ -2,7 +2,7 @@
 <?ccsproject version="1.0"?>
 <projectOptions>
 	<deviceFamily value="C2000"/>
-	<isTargetManual value="true"/>
-	<origin value="D:/OneDrive - NTB/workspace_v8/ILBST"/>
+	<isTargetManual value="false"/>
+	<origin value="D:/GitHub/ILBST_CLA"/>
 	<connection value="common/targetdb/connections/TIXDS100usb_Connection.xml"/>
 </projectOptions>

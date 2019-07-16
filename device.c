@@ -62,17 +62,16 @@
 static int32_t device_initSysCtl(void);
 static int32_t device_initCPUTimer(void);
 static int32_t device_initCPUMemory(void);
-static int32_t device_initClocks(void);
-static int32_t device_initDAC(void);
+
 static int32_t device_initCLA(void);
-static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx);
+//static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx);
 static int32_t device_initSCI(void);
 static int32_t device_initEPWM(void);
-static int32_t device_initEPWM3phInterleaved(void);
-static int32_t device_initEPWM3phNIBBSpecialModulation(void);
+//static int32_t device_initEPWM3phInterleaved(void);
+//static int32_t device_initEPWM3phNIBBSpecialModulation(void);
 static int32_t device_initADC(void);
 static int32_t device_initGPIO(void);
-static int32_t device_initGPIO3phInterleaved(void);
+//static int32_t device_initGPIO3phInterleaved(void);
 void __error__(char *filename, uint32_t line);
 
 
@@ -99,6 +98,8 @@ __interrupt void ISR_ILLEGAL(void);
  */
 int32_t device_init(void)
 {
+    DINT;
+
     int32_t err = NO_ERROR;
 
     /* Initialize PLL, calibrations and clock system*/
@@ -119,14 +120,14 @@ int32_t device_init(void)
     ConfigCpuTimer(&CpuTimer1, 60, 100);   //CPU Timer 1 interrupt after 0.5 ms (at 60MHz CPU freq.)
 
     /* Init watchdog */
-    //    device_initWatchdog();
+    //device_initWatchdog();
 
 
     /* Initialize all peripherals */
     device_initSCI();
     device_initEPWM();
     device_initADC();
-    device_initDAC();
+
 
     /* Clear all TZ flags before starting*/
     //device_setALLClearTZFlags();
@@ -144,11 +145,11 @@ int32_t device_init(void)
     PieVectTable.SCIRXINTA = &sciaRXISR;
     //PieVectTable.SCITXINTA = &sciaTxIsr;
 
-    PieVectTable.ADCINT1 = &AdcInterruptISR;
+//    PieVectTable.ADCINT1 = &AdcInterruptISR;
     PieVectTable.TINT0 = &cpu_timer0_isr;
     PieVectTable.TINT1 = &cpu_timer1_isr;
 
-    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;          // ADCINT1
+//    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;          // ADCINT1
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;          // TINT0
 
     IER |= M_INT1;
@@ -173,12 +174,15 @@ static int32_t device_initSysCtl(void)
 {
     // PLL, WatchDog, enable Peripheral Clocks
     InitSysCtrl();
+    InitPeripheralClocks();
 
     return NO_ERROR;
 }
 
 static int32_t device_initCLA(void)
 {
+    extern Uint32 Cla1Prog_Start;
+
     // Copy CLA code from its load address to CLA program RAM
     //
     // Note: during debug the load and run addresses can be
@@ -215,7 +219,7 @@ static int32_t device_initCPUTimer(void)
     // Timer period definitions found in PeripheralHeaderIncludes.h
     CpuTimer0Regs.PRD.all =  mSec0_5 ;      // A tasks
     CpuTimer1Regs.PRD.all =  mSec50;    // B tasks
-    //CpuTimer2Regs.PRD.all =  mSec10;  // C tasks
+    CpuTimer2Regs.PRD.all =  mSec10;  // C tasks
 
     // Configure CPU-Timer 2 to interrupt every second:
     // 60MHz CPU Freq, Period (in uSeconds)
@@ -263,78 +267,6 @@ static int32_t device_initCPUMemory(void)
 
 
 /*
- * Initialize all clocks
- */
-static int32_t device_initClocks(void)
-{
-    EALLOW;
-
-    InitPeripheralClocks;
-
-    //    // LOW SPEED CLOCKS prescale register settings
-    //    SysCtrlRegs.LOSPCP.all = 0x0002;     // Sysclk / 4 (15 MHz)
-    //    SysCtrlRegs.XCLK.bit.XCLKOUTDIV=2;
-    //
-    //    // PERIPHERAL CLOCK ENABLES
-    //    //---------------------------------------------------
-    //    // If you are not using a peripheral you may want to switch
-    //    // the clock off to save power, i.e. set to =0
-    //    //
-    //    // Note: not all peripherals are available on all 280x derivates.
-    //    // Refer to the datasheet for your particular device.
-    //
-    //    SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1;    // ADC
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR3.bit.COMP1ENCLK = 1;  // COMP1
-    //    SysCtrlRegs.PCLKCR3.bit.COMP2ENCLK = 1;  // COMP2
-    //    SysCtrlRegs.PCLKCR3.bit.COMP3ENCLK = 1;  // COMP3
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR1.bit.ECAP1ENCLK = 0;  //eCAP1
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=0;   // eCAN-A
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR1.bit.EQEP1ENCLK = 0;  // eQEP1
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM1ENCLK = 1;  // ePWM1
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM2ENCLK = 1;  // ePWM2
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM3ENCLK = 1;  // ePWM3
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM4ENCLK = 1;  // ePWM4
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM5ENCLK = 1;  // ePWM5
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM6ENCLK = 0;  // ePWM6
-    //    SysCtrlRegs.PCLKCR1.bit.EPWM7ENCLK = 1;  // ePWM7
-    //    SysCtrlRegs.PCLKCR0.bit.HRPWMENCLK = 0;    // HRPWM
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.I2CAENCLK = 1;   // I2C
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.LINAENCLK = 0;   // LIN-A
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR3.bit.CLA1ENCLK = 0;   // CLA1
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.SCIAENCLK = 1;   // SCI-A
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 0;   // SPI-A
-    //    SysCtrlRegs.PCLKCR0.bit.SPIBENCLK = 0;   // SPI-B
-    //    //------------------------------------------------
-    //    SysCtrlRegs.PCLKCR0.bit.TBCLKSYNC = 1;   // Enable TBCLK
-    //    //------------------------------------------------
-
-    EDIS;   // Disable register access
-
-    return NO_ERROR;
-}
-
-
-/*
- * DAC initialization
- * USAGE: DAC_setShadowValue(DACA_BASE, value)
- */
-static int32_t device_initDAC(void)
-{
-
-    return NO_ERROR;
-}
-
-/*
  * SCIA is used for communication to the PC
  * A ring buffer is used without the internal FIFO
  */
@@ -367,17 +299,17 @@ static int32_t device_initSCI(void)
     return NO_ERROR;
 }
 
-/* not misra compliant */
-static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx)
-{
-    uint16_t temp;
-    while(!ringbuffer_empty(rbufrx))
-    {
-        ringbuffer_get(rbufrx, &temp);
-        ringbuffer_put(rbuftx, temp);
-    }
-    return NO_ERROR;
-}
+///* not misra compliant */
+//static int32_t device_serialEcho(ringbuffer_t *rbufrx, ringbuffer_t *rbuftx)
+//{
+//    uint16_t temp;
+//    while(!ringbuffer_empty(rbufrx))
+//    {
+//        ringbuffer_get(rbufrx, &temp);
+//        ringbuffer_put(rbuftx, temp);
+//    }
+//    return NO_ERROR;
+//}
 
 static int32_t device_initEPWM(void)
 {
@@ -404,15 +336,15 @@ static int32_t device_initEPWM(void)
     EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
     EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
     EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
-//    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM1A
-//    EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-//    EPwm1Regs.AQCTLB.bit.CAU = AQ_SET; // set actions for EPWM1A
-//    EPwm1Regs.AQCTLB.bit.CAD = AQ_CLEAR;
-//    EPwm1Regs.DBCTL.bit.IN_MODE = DBA_RED_DBB_FED;
-//    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
-//    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
-//    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
-//    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
+    //    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM1A
+    //    EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+    //    EPwm1Regs.AQCTLB.bit.CAU = AQ_SET; // set actions for EPWM1A
+    //    EPwm1Regs.AQCTLB.bit.CAD = AQ_CLEAR;
+    //    EPwm1Regs.DBCTL.bit.IN_MODE = DBA_RED_DBB_FED;
+    //    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+    //    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+    //    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
+    //    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
 
     // ADC trigger
     EPwm1Regs.ETSEL.bit.SOCAEN   = 1;
@@ -448,176 +380,176 @@ static int32_t device_initEPWM(void)
     return NO_ERROR;
 }
 
-static int32_t device_initEPWM3phInterleaved(void)
-{
-    //=====================================================================
-    // Config
-    // Initialization Time
-    //===========================================================================
-    // EPWM Module 1 config
-    EPwm1Regs.TBPRD = EPWM_A_INIT_PERIOD; // Period = 900 TBCLK counts
-    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
-    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
-    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Master module
-    EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO; // Sync down-stream module
-    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM1A
-    EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
-    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
-    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
-    
-        // EPWM Module 2 config
-    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
-    EPwm2Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
-    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
-    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
-    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
-    EPwm2Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
-    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
-    EPwm2Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
-    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
-    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//static int32_t device_initEPWM3phInterleaved(void)
+//{
+//    //=====================================================================
+//    // Config
+//    // Initialization Time
+//    //===========================================================================
+//    // EPWM Module 1 config
+//    EPwm1Regs.TBPRD = EPWM_A_INIT_PERIOD; // Period = 900 TBCLK counts
+//    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+//    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+//    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Master module
+//    EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+//    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO; // Sync down-stream module
+//    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM1A
+//    EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+//    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+//    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+//    EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//        // EPWM Module 2 config
+//    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
+//    EPwm2Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
+//    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+//    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
+//    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+//    EPwm2Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+//    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
+//    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
+//    EPwm2Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+//    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+//    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+//    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//    // EPWM Module 3 config
+//    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
+//    EPwm3Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
+//    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
+//    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
+//    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+//    EPwm3Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+//    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
+//    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
+//    EPwm3Regs.AQCTLA.bit.CAD = AQ_CLEAR;
+//    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+//    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+//    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//    // EPWM Module 3 config
+//
+//    // Run Time (Note: Example execution of one run-time instant)
+//    //===========================================================
+//    EPwm1Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
+//    EPwm2Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+//    EPwm3Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+//
+//    return NO_ERROR;
+//}
 
-    // EPWM Module 3 config
-    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
-    EPwm3Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
-    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
-    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Slave module
-    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
-    EPwm3Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN; // sync flow-through
-    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET; // set actions for EPWM2A
-    EPwm3Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
-    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
-    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
-    
-    // EPWM Module 3 config
-
-    // Run Time (Note: Example execution of one run-time instant)
-    //===========================================================
-    EPwm1Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
-    EPwm2Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
-    EPwm3Regs.CMPA.half.CMPA = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
-
-    return NO_ERROR;
-}
-
-static int32_t device_initEPWM3phNIBBSpecialModulation(void)
-{
-    // This modulation is used by inverted power has suggestion,
-    // is similar to a NIBB but the PH1 and PH3 are never overlapping (L store energy)
-    // the phase PH1/PH2 are interleaving
-    
-    // EPWM Module 1 config
-    EPwm1Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
-    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
-    EPwm1Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = TBCLK counts
-    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND; // adjust duty for output EPWM1A
-    EPwm1Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
-
-    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
-    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Phase loading disabled
-
-
-    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
-    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-
-    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
-    EPwm1Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
-
-    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
-    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
-    EPwm1Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm1Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
-
-    // EPWM Module 2 config
-    EPwm2Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
-    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
-    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 1401 TBCLK counts
-    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
-    EPwm2Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
-
-    EPwm2Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
-    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
-
-    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN;
-
-    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
-    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-
-    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
-    EPwm2Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
-
-    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
-    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
-    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
-
-    // EPWM Module 3 config
-    EPwm3Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
-    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP;
-    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 801 TBCLK counts
-    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
-    EPwm3Regs.CMPB = EPWM_B_INIT_PERIOD-(2*EPWM_A_INIT_CMPA); // adjust duty for output EPWM3A
-
-    EPwm3Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
-    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
-    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
-
-
-    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;
-    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
-    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
-
-    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
-    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;
-    EPwm3Regs.AQCTLA.bit.CBU = AQ_CLEAR;
-
-    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
-    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
-    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
-    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
-
-    return NO_ERROR;
-}
+//static int32_t device_initEPWM3phNIBBSpecialModulation(void)
+//{
+//    // This modulation is used by inverted power has suggestion,
+//    // is similar to a NIBB but the PH1 and PH3 are never overlapping (L store energy)
+//    // the phase PH1/PH2 are interleaving
+//
+//    // EPWM Module 1 config
+//    EPwm1Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+//    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
+//    EPwm1Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = TBCLK counts
+//    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND; // adjust duty for output EPWM1A
+//    EPwm1Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
+//
+//    EPwm1Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+//    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE; // Phase loading disabled
+//
+//
+//    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
+//    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//
+//    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+//    EPwm1Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+//
+//    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+//    EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+//    EPwm1Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm1Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//    // EPWM Module 2 config
+//    EPwm2Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+//    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Asymmetrical mode
+//    EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 1401 TBCLK counts
+//    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+//    EPwm2Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
+//
+//    EPwm2Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+//    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
+//
+//    EPwm2Regs.TBCTL.bit.PHSDIR = TB_DOWN;
+//
+//    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
+//    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//
+//    EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+//    EPwm2Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+//
+//    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable dead-band module
+//    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi Complementary
+//    EPwm2Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm2Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//    // EPWM Module 3 config
+//    EPwm3Regs.TBCTL.bit.PRDLD = TB_IMMEDIATE;
+//    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP;
+//    EPwm3Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 801 TBCLK counts
+//    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+//    EPwm3Regs.CMPB = EPWM_B_INIT_PERIOD-(2*EPWM_A_INIT_CMPA); // adjust duty for output EPWM3A
+//
+//    EPwm3Regs.TBPHS.half.TBPHS = 0; // Set Phase register to zero
+//    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE; // Phase loading disabled
+//    EPwm3Regs.TBCTL.bit.PHSDIR = TB_DOWN; // Count DOWN on sync (=120 deg)
+//
+//
+//    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;
+//    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1; // TBCLK = SYSCLKOUT
+//    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+//
+//    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+//    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+//    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO; // load on CTR=Zero
+//    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;
+//    EPwm3Regs.AQCTLA.bit.CBU = AQ_CLEAR;
+//
+//    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
+//    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
+//    EPwm3Regs.DBFED = EPWM_B_INIT_DEADBAND; // FED = 20 TBCLKs
+//    EPwm3Regs.DBRED = EPWM_B_INIT_DEADBAND; // RED = 20 TBCLKs
+//
+//    return NO_ERROR;
+//}
 
 /* sciaRXFIFOISR - SCIA Receive FIFO ISR */
 __interrupt void sciaRXISR(void)
@@ -640,7 +572,7 @@ __interrupt void sciaRXISR(void)
 static int32_t device_initADC(void)
 {
 
-     // Assumes ADC clock is already enabled in InitSysCtrl();
+    // Assumes ADC clock is already enabled in InitSysCtrl();
 
     //
     // Call the InitAdc function in the DSP2803x_Adc.c file
@@ -670,7 +602,7 @@ static int32_t device_initADC(void)
     EDIS;
     DELAY_US(ADC_usDELAY);         // Delay before converting ADC channels
 
- //   AdcOffsetSelfCal();
+    //   AdcOffsetSelfCal();
 
     // Configure ADC
     EALLOW;
@@ -791,19 +723,13 @@ static int32_t device_initGPIO(void)
     //  GpioDataRegs.GPASET.bit.GPIO7 = 1;      // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
     //  GPIO-08 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPAMUX1.bit.GPIO8 = 0;     // 0=GPIO,  1=EPWM5A,  2=Resv,  3=ADCSOC-A
-    //  GpioCtrlRegs.GPADIR.bit.GPIO8 = 0;      // 1=OUTput,  0=INput
+    GpioCtrlRegs.GPAMUX1.bit.GPIO8 = 3;     // 0=GPIO,  1=EPWM5A,  2=Resv,  3=ADCSOC-A
+    GpioCtrlRegs.GPADIR.bit.GPIO8 = 0;      // 1=OUTput,  0=INput
     //  GpioDataRegs.GPACLEAR.bit.GPIO8 = 1;    // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO8 = 1;      // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
-    //  GPIO-09 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPAMUX1.bit.GPIO9 = 0;     // 0=GPIO,  1=EPWM5B,  2=LINTX-A,  3=Resv
-    //  GpioCtrlRegs.GPADIR.bit.GPIO9 = 0;      // 1=OUTput,  0=INput
-    //  GpioDataRegs.GPACLEAR.bit.GPIO9 = 1;    // uncomment if --> Set Low initially
-    //  GpioDataRegs.GPASET.bit.GPIO9 = 1;      // uncomment if --> Set High initially
-    //--------------------------------------------------------------------------------------
     //  GPIO-10 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPAMUX1.bit.GPIO10 = 0;    // 0=GPIO,  1=EPWM6A,  2=Resv,  3=ADCSOC-B
+    GpioCtrlRegs.GPAMUX1.bit.GPIO10 = 3;    // 0=GPIO,  1=EPWM6A,  2=Resv,  3=ADCSOC-B
     GpioCtrlRegs.GPADIR.bit.GPIO10 = 0;     // 1=OUTput,  0=INput
     //  GpioDataRegs.GPACLEAR.bit.GPIO10 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO10 = 1;     // uncomment if --> Set High initially
@@ -813,103 +739,7 @@ static int32_t device_initGPIO(void)
     GpioCtrlRegs.GPADIR.bit.GPIO11 = 1;     // 1=OUTput,  0=INput
     GpioDataRegs.GPACLEAR.bit.GPIO11 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO11 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-12 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 0;    // 0=GPIO,  1=TZ1,  2=SCITX-A,  3=SPISIMO-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO12 = 1;     // 1=OUTput,  0=INput
-//    GpioDataRegs.GPACLEAR.bit.GPIO12 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO12 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-13 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO13 = 0;    // 0=GPIO,  1=TZ2,  2=Resv,  3=SPISOMI-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO13 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO13 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO13 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-14 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO14 = 0;    // 0=GPIO,  1=TZ3,  2=LINTX-A,  3=SPICLK-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO14 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO14 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO14 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-15 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO15 = 0;    // 0=GPIO,  1=TZ1,  2=LINRX-A,  3=SPISTE-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO15 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO15 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO15 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-16 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0;    // 0=GPIO,  1=SPISIMO-A,  2=Resv,  3=TZ2
-//    GpioCtrlRegs.GPADIR.bit.GPIO16 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO16 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO16 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-17 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 0;    // 0=GPIO,  1=SPISOMI-A,  2=Resv,  3=TZ3
-//    GpioCtrlRegs.GPADIR.bit.GPIO17 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO17 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO17 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-18 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0;    // 0=GPIO,  1=SPICLK-A,  2=LINTX-A,  3=XCLKOUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO18 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO18 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-19 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;    // 0=GPIO,  1=SPISTE-A,  2=LINRX-A,  3=ECAP1
-//    GpioCtrlRegs.GPADIR.bit.GPIO19 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO19 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-20 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO20 = 0;    // 0=GPIO,  1=EQEPA-1,  2=Resv,  3=COMP1OUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO20 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO20 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO20 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-21 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO21 = 0;    // 0=GPIO,  1=EQEPB-1,  2=Resv,  3=COMP2OUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO21 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO21 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO21 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-22 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO22 = 0;    // 0=GPIO,  1=EQEPS-1,  2=Resv,  3=LINTX-A
-//    GpioCtrlRegs.GPADIR.bit.GPIO22 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO22 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-23 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0;    // 0=GPIO,  1=EQEPI-1,  2=Resv,  3=LINRX-A
-//    GpioCtrlRegs.GPADIR.bit.GPIO23 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO23 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO23 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-24 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 0;    // 0=GPIO,  1=ECAP1,  2=Resv,  3=SPISIMO-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO24 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO24 = 1;   // uncomment if --> Set Low initially
-//    GpioDataRegs.GPASET.bit.GPIO24 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-25 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPISOMI-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO25 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO25 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-26 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPICLK-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO26 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO26 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO26 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-27 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO27 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPISTE-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO27 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO27 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO27 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------------
     //  GPIO-28 - PIN FUNCTION = SCI-RX
     GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 1;    // 0=GPIO,  1=SCIRX-A,  2=I2CSDA-A,  3=TZ2
     //  GpioCtrlRegs.GPADIR.bit.GPIO28 = 1;     // 1=OUTput,  0=INput
@@ -921,31 +751,15 @@ static int32_t device_initGPIO(void)
     //  GpioCtrlRegs.GPADIR.bit.GPIO29 = 0;     // 1=OUTput,  0=INput
     //  GpioDataRegs.GPACLEAR.bit.GPIO29 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO29 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-30 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO30 = 0;    // 0=GPIO,  1=CANRX-A,  2=Resv,  3=Resv
-//    GpioCtrlRegs.GPADIR.bit.GPIO30 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO30 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO30 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-31 - PIN FUNCTION = LED2 on controlCARD
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 0;    // 0=GPIO,  1=CANTX-A,  2=Resv,  3=Resv
-//    GpioCtrlRegs.GPADIR.bit.GPIO31 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO31 = 1;   // uncomment if --> Set Low initially
-//    GpioDataRegs.GPASET.bit.GPIO31 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-32 - PIN FUNCTION = I2CSDA
-//    GpioCtrlRegs.GPBMUX1.bit.GPIO32 = 1;    // 0=GPIO,  1=I2CSDA-A,  2=SYNCI,  3=ADCSOCA
-//    //  GpioCtrlRegs.GPBDIR.bit.GPIO32 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPBCLEAR.bit.GPIO32 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPBSET.bit.GPIO32 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-33 - PIN FUNCTION = PFC-DrvEnable
-//    GpioCtrlRegs.GPBMUX1.bit.GPIO33 = 1;    // 0=GPIO,  1=I2CSCL-A,  2=SYNCO,  3=ADCSOCB
-//    //  GpioCtrlRegs.GPBDIR.bit.GPIO33 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPBCLEAR.bit.GPIO33 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPBSET.bit.GPIO33 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------------
+    //  GPIO-31 - PIN FUNCTION = LED2 on controlCARD
+    GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 0;    // 0=GPIO,  1=CANTX-A,  2=Resv,  3=Resv
+    GpioCtrlRegs.GPADIR.bit.GPIO31 = 1;     // 1=OUTput,  0=INput
+    //  GpioDataRegs.GPACLEAR.bit.GPIO31 = 1;   // uncomment if --> Set Low initially
+    GpioDataRegs.GPASET.bit.GPIO31 = 1;     // uncomment if --> Set High initially
+    //--------------------------------------------------------------------------------------
+
+    //--------------------------------------------------------------------------------------
     //  GPIO-34 - PIN FUNCTION = LED3 on controlCARD
     GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=Resv
     GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;     // 1=OUTput,  0=INput
@@ -957,23 +771,6 @@ static int32_t device_initGPIO(void)
     // usage.
     //--------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------
-    //  GPIO-39 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPBMUX1.bit.GPIO39 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=Resv
-    GpioCtrlRegs.GPBDIR.bit.GPIO39 = 0;     // 1=OUTput,  0=INput
-    //  GpioDataRegs.GPBCLEAR.bit.GPIO39 = 1;   // uncomment if --> Set Low initially
-    //  GpioDataRegs.GPBSET.bit.GPIO39 = 1;     // uncomment if --> Set High initially
-    //--------------------------------------------------------------------------------------
-    //  GPIO-40 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPBMUX1.bit.GPIO40 = 0;    // 0=GPIO,  1=EPWM7A,  2=Resv,  3=Resv
-    GpioCtrlRegs.GPBDIR.bit.GPIO40 = 0;     // 1=OUTput,  0=INput
-    //  GpioDataRegs.GPBCLEAR.bit.GPIO40 = 1;   // uncomment if --> Set Low initially
-    //  GpioDataRegs.GPBSET.bit.GPIO40 = 1;     // uncomment if --> Set High initially
-    //--------------------------------------------------------------------------------------
-    //  GPIO-41 - PIN FUNCTION = --Spare--
-    GpioCtrlRegs.GPBMUX1.bit.GPIO41 = 0;    // 0=GPIO,  1=EPWM7B,  2=Resv,  3=Resv
-    GpioCtrlRegs.GPBDIR.bit.GPIO41 = 0;     // 1=OUTput,  0=INput
-    //  GpioDataRegs.GPBCLEAR.bit.GPIO41 = 1;   // uncomment if --> Set Low initially
-    //  GpioDataRegs.GPBSET.bit.GPIO41 = 1;     // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
     //  GPIO-42 - PIN FUNCTION = LED2
     GpioCtrlRegs.GPBMUX1.bit.GPIO42 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=COMP1OUT
@@ -1003,17 +800,17 @@ static int32_t device_initGPIO(void)
     return NO_ERROR;
 }
 
-static int32_t device_initGPIO3phInterleaved(void)
-{
-    return NO_ERROR;
-}
+//static int32_t device_initGPIO3phInterleaved(void)
+//{
+//    return NO_ERROR;
+//}
 
-void updateDutyEPwm(uint16_t duty)
-{
-    EPwm1Regs.CMPA.half.CMPA = duty;
-    EPwm2Regs.CMPA.half.CMPA = duty;
-    EPwm3Regs.CMPA.half.CMPA = duty;
-}
+//void updateDutyEPwm(uint16_t duty)
+//{
+//    EPwm1Regs.CMPA.half.CMPA = duty;
+//    EPwm2Regs.CMPA.half.CMPA = duty;
+//    EPwm3Regs.CMPA.half.CMPA = duty;
+//}
 
 
 // interrupt routine for led blinking

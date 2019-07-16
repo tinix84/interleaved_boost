@@ -143,7 +143,7 @@ uint32_t actual_duty_cnt = 0;
 uint32_t actual_phdly_cnt = 0;
 uint32_t actual_pwm_period = 0;
 uint32_t actual_deadtime_cnt = 0;
-uint32_t foo2 = 0;
+uint32_t new_deadtime_ns = 0;
 
 
 /* ==================================================================== */

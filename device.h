@@ -49,18 +49,6 @@
 /* ==================================================================== */
 /* ======================= public functions =========================== */
 /* ==================================================================== */
-//CLA ISRs
-__interrupt void cla1_isr2(void);
-
-//Linker defined vars
-extern Uint16 Cla1Prog_Start;
-extern Uint16 Cla1funcsLoadStart;
-extern Uint16 Cla1funcsLoadEnd;
-extern Uint16 Cla1funcsRunStart;
-extern Uint16 Cla1funcsLoadSize;
-extern Uint16 Cla1mathTablesLoadStart;
-extern Uint16 Cla1mathTablesRunStart;
-extern Uint16 Cla1mathTablesLoadSize;
 
 //microprocessor public functions
 extern int32_t device_init(void);

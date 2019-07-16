@@ -87,6 +87,33 @@ __interrupt void Cla1Task7();
 __interrupt void Cla1Task8();
 
 
+//CLA ISRs
+__interrupt void cla1_isr2(void);
+
+//Linker defined vars
+__interrupt void Cla1Task1();
+__interrupt void Cla1Task2();
+//__interrupt void Cla1Task3();
+//__interrupt void Cla1Task4();
+//__interrupt void Cla1Task5();
+//__interrupt void Cla1Task6();
+__interrupt void Cla1Task7();
+__interrupt void Cla1Task8();
+
+extern Uint32 Cla1Prog_Start;
+extern Uint16 Cla1funcsLoadStart;
+extern Uint16 Cla1funcsLoadSize;
+extern Uint16 Cla1funcsRunStart;
+
+extern Uint32 Cla1T1End;
+extern Uint32 Cla1T2End;
+extern Uint32 Cla1T3End;
+extern Uint32 Cla1T4End;
+extern Uint32 Cla1T5End;
+extern Uint32 Cla1T6End;
+extern Uint32 Cla1T7End;
+extern Uint32 Cla1T8End;
+
 
 //C Function Prototypes
 
