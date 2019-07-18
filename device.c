@@ -111,6 +111,9 @@ int32_t device_init(void)
     /* Initialize board related peripherals */
     // Connect ePWM1, ePWM2, ePWM3 to GPIO pins, so that in not necessary toggle function in ISR
     device_initGPIO();
+    // Setup only the GPI/O only for SCI-A and SCI-B functionality
+    // This function is found in DSP2803x_Sci.c
+    InitSciaGpio();
 
     /* Initialize the CLA Memory */
     device_initCLA();
@@ -127,7 +130,7 @@ int32_t device_init(void)
     device_initSCI();
     device_initEPWM();
     device_initADC();
-
+    //device_initDAC();
 
     /* Clear all TZ flags before starting*/
     //device_setALLClearTZFlags();
@@ -149,10 +152,23 @@ int32_t device_init(void)
     PieVectTable.TINT0 = &cpu_timer0_isr;
     PieVectTable.TINT1 = &cpu_timer1_isr;
 
-//    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;          // ADCINT1
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;          // TINT0
-
+    // Enable CPU INT1 which is connected to CPU-Timer 0:
     IER |= M_INT1;
+    // Enable TINT0 in the PIE: Group 1 interrupt 7
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    // Enable CPU INT3 which is connected to EPWM1-3 INT:
+    IER |= M_INT3;
+    // Enable EPWM INTn in the PIE: Group 3 interrupt 1-3
+    PieCtrlRegs.PIEIER3.bit.INTx1 = 1;
+    PieCtrlRegs.PIEIER3.bit.INTx2 = 1;
+    PieCtrlRegs.PIEIER3.bit.INTx3 = 1;
+
+    // Enable interrupts required for this example
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;   // Enable the PIE block
+    PieCtrlRegs.PIEIER9.bit.INTx1=1;     // PIE Group 9, INT1
+    PieCtrlRegs.PIEIER9.bit.INTx2=1;     // PIE Group 9, INT2
+    IER = 0x100; // Enable CPU INT
+    EINT;
     IER |= M_INT13;
 
 
@@ -181,7 +197,16 @@ static int32_t device_initSysCtl(void)
 
 static int32_t device_initCLA(void)
 {
-    extern Uint32 Cla1Prog_Start;
+    //
+    // These are defined by the linker file and used to copy
+    // the CLA code from its load address to its run address
+    // in CLA program memory
+    //
+    extern Uint16 Cla1funcsLoadStart;
+    extern Uint16 Cla1funcsLoadEnd;
+    extern Uint16 Cla1funcsLoadSize;
+    extern Uint16 Cla1funcsRunStart;
+    extern Uint16 Cla1Prog_Start;
 
     // Copy CLA code from its load address to CLA program RAM
     //
@@ -249,13 +274,18 @@ static int32_t device_initCPUTimer(void)
  */
 static int32_t device_initCPUMemory(void)
 {
+    extern Uint16 RamfuncsLoadStart;
+    extern Uint16 RamfuncsLoadSize;
+    extern Uint16 RamfuncsRunStart;
+
     // Only used if running from FLASH
     // Note that the variable FLASH is defined by the compiler with -d FLASH
 #ifdef FLASH
     // Copy time critical code and Flash setup code to RAM
     // The  RamfuncsLoadStart, RamfuncsLoadEnd, and RamfuncsRunStart
     // symbols are created by the linker. Refer to the linker files.
-    MemCopy(&RamfuncsLoadStart, &RamfuncsLoadEnd, &RamfuncsRunStart);
+    memcpy((uint16_t *)&RamfuncsRunStart,(uint16_t *)&RamfuncsLoadStart, (unsigned long)&RamfuncsLoadSize);;
+//    memcpy((uint16_t *)&Cla1funcsLoadStart, (uint16_t *)&Cla1funcsRunStart, (unsigned long)&Cla1funcsLoadSize);
 
     // Call Flash Initialization to setup flash waitstates
     // This function must reside in RAM
@@ -619,33 +649,41 @@ static int32_t device_initADC(void)
     AdcRegs.ADCSAMPLEMODE.bit.SIMULEN2 = 1;
     AdcRegs.ADCSAMPLEMODE.bit.SIMULEN4 = 1;
 
-    AdcRegs.ADCSOC0CTL.bit.CHSEL    = 1;    // A1 - I1_Slow 1
-    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC0CTL.bit.CHSEL    = 2;    // A2 - Ifb_Sum
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 5;    // ADCTRIG5 – ePWM1, ADCSOCA
     AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
 
-    AdcRegs.ADCSOC1CTL.bit.CHSEL    = 9;    // B1 -  Vout1 9
-    AdcRegs.ADCSOC1CTL.bit.TRIGSEL  = 6;
-    AdcRegs.ADCSOC1CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    AdcRegs.ADCSOC0CTL.bit.CHSEL    = 5;    // A5 - Ifb_W
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 5;    // ADCTRIG5 – ePWM1, ADCSOCA
+    AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
 
-    AdcRegs.ADCSOC2CTL.bit.CHSEL    = 3;    // A3 - I2_Slow 3
-    AdcRegs.ADCSOC2CTL.bit.TRIGSEL  = 6;
-    AdcRegs.ADCSOC2CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC3CTL.bit.CHSEL    = 11;    // B3 -  Vout2 11
-    AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = 6;
-    AdcRegs.ADCSOC3CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC4CTL.bit.CHSEL    = 7;   // A7 - I3_Slow 7
-    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC4CTL.bit.CHSEL    = 6;    // A6 - Vfb_Bus
+    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 5;
     AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
 
-    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 15;    // B7 -  Vout3 15
-    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 6;
+    AdcRegs.ADCSOC4CTL.bit.CHSEL    = 7;    // A7 - Vfb_Bus
+    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC3CTL.bit.CHSEL    = 11;   // B3 - Ifb_U
+    AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC3CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC6CTL.bit.CHSEL    = 12;   // B4 - Vfb_W
+    AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC6CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 13;   // B5 - Ifb_V
+    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
     AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
 
-    AdcRegs.ADCSOC6CTL.bit.CHSEL    = 10;    // B2 -  Vout LLC
-    AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = 6;
-    AdcRegs.ADCSOC6CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 14;   // B6 - Vfb_V
+    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+
+    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 15;   // B7 - Vfb_U
+    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
     EDIS;
 
 

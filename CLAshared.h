@@ -100,7 +100,7 @@ __interrupt void Cla1Task2();
 __interrupt void Cla1Task7();
 __interrupt void Cla1Task8();
 
-extern Uint32 Cla1Prog_Start;
+extern Uint16 Cla1Prog_Start;
 extern Uint16 Cla1funcsLoadStart;
 extern Uint16 Cla1funcsLoadSize;
 extern Uint16 Cla1funcsRunStart;

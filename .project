@@ -26,9 +26,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>28035_RAM_CLA_lnk.cmd</name>
+			<name>F28035_CLA_C.cmd</name>
 			<type>1</type>
-			<locationURI>PROJECT_LOC/hal/DSP2803x_common/cmd/28035_RAM_CLA_lnk.cmd</locationURI>
+			<locationURI>PROJECT_LOC/hal/DSP2803x_common/cmd/F28035_CLA_C.cmd</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
