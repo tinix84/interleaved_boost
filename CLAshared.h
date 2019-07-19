@@ -41,6 +41,7 @@ extern float cla_Iref3;
 extern float cla_Iout1;
 extern float cla_Iout2;
 extern float cla_Iout3;
+extern float cla_Iout123;
 
 extern float cla_Ramp1_Volt;
 extern float cla_Ramp2_Volt;
@@ -88,7 +89,7 @@ __interrupt void Cla1Task8();
 
 
 //CLA ISRs
-__interrupt void cla1_isr2(void);
+//__interrupt void cla1_isr2(void);
 
 //Linker defined vars
 __interrupt void Cla1Task1();

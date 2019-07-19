@@ -22,20 +22,14 @@
 __interrupt void Cla1Task1 ( void )
 {
 
-     //Current Controller Phase_1
-     cla_Iout1 = AdcResult.ADCRESULT0;
-
-     //Voltage Controller Vin
-     cla_Vout1 = AdcResult.ADCRESULT1;
-
-     //Current Controller Phase_2
-     cla_Iout2 = AdcResult.ADCRESULT2;
-
-     //Voltage Controller Vout
-     cla_Vout2 = AdcResult.ADCRESULT3;
-
-     //Current Controller Phase_3
-     cla_Iout3 = AdcResult.ADCRESULT4;
+     cla_Iout123 = AdcResult.ADCRESULT1; // A2 - Ifb_Sum
+     cla_Iout3 = AdcResult.ADCRESULT2; // A5 - Ifb_W
+     cla_Vout1 = AdcResult.ADCRESULT3; // A7 - Vfb_Bus
+     cla_Iout1 = AdcResult.ADCRESULT5; // B3 - Ifb_U
+     cla_Vout3 = AdcResult.ADCRESULT4; // B4 - Vfb_W
+     cla_Iout2 = AdcResult.ADCRESULT7; // B5 - Ifb_V
+     cla_Vout2 = AdcResult.ADCRESULT8; // B6 - Vfb_V
+     cla_Vout1 = AdcResult.ADCRESULT9; // B7 - Vfb_U
 
 }
 

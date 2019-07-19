@@ -147,28 +147,29 @@ int32_t device_init(void)
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.SCIRXINTA = &sciaRXISR;
     //PieVectTable.SCITXINTA = &sciaTxIsr;
-
-//    PieVectTable.ADCINT1 = &AdcInterruptISR;
+    PieVectTable.ADCINT1 = &AdcInterruptISR;
     PieVectTable.TINT0 = &cpu_timer0_isr;
     PieVectTable.TINT1 = &cpu_timer1_isr;
 
-    // Enable CPU INT1 which is connected to CPU-Timer 0:
-    IER |= M_INT1;
-    // Enable TINT0 in the PIE: Group 1 interrupt 7
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
-    // Enable CPU INT3 which is connected to EPWM1-3 INT:
-    IER |= M_INT3;
+    
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1; // ADCINT1
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1; // Enable TINT0 in the PIE: Group 1 interrupt 7
     // Enable EPWM INTn in the PIE: Group 3 interrupt 1-3
     PieCtrlRegs.PIEIER3.bit.INTx1 = 1;
     PieCtrlRegs.PIEIER3.bit.INTx2 = 1;
     PieCtrlRegs.PIEIER3.bit.INTx3 = 1;
 
-    // Enable interrupts required for this example
+    // ????
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;   // Enable the PIE block
     PieCtrlRegs.PIEIER9.bit.INTx1=1;     // PIE Group 9, INT1
     PieCtrlRegs.PIEIER9.bit.INTx2=1;     // PIE Group 9, INT2
+
     IER = 0x100; // Enable CPU INT
-    EINT;
+    // Enable CPU INT1 which is connected to CPU-Timer 0:
+    IER |= M_INT1;
+    // Enable CPU INT3 which is connected to EPWM1-3 INT:
+    IER |= M_INT3;
+    // Enable CPU INT13 which is connected to ADC INT:
     IER |= M_INT13;
 
 
@@ -208,31 +209,51 @@ static int32_t device_initCLA(void)
     extern Uint16 Cla1funcsRunStart;
     extern Uint16 Cla1Prog_Start;
 
-    // Copy CLA code from its load address to CLA program RAM
-    //
-    // Note: during debug the load and run addresses can be
-    // the same as Code Composer Studio can load the CLA program
-    // RAM directly.
-    //
-    // The ClafuncsLoadStart, Cla1funcsLoadSize, and ClafuncsRunStart
-    // symbols are created by the linker.
-    memcpy((uint16_t *)&Cla1funcsRunStart,(uint16_t *)&Cla1funcsLoadStart, (unsigned long)&Cla1funcsLoadSize);
+   // This code assumes the CLA clock is already enabled in 
+   // the call to DevInit();
+   //
+   // EALLOW: is needed to write to EALLOW protected registers
+   // EDIS: is needed to disable write to EALLOW protected registers
+   //
+   // The symbols used in this calculation are defined in the CLA 
+   // assembly code and in the CLAShared.h header file
 
-    // Initialize the CLA registers
     EALLOW;
     Cla1Regs.MVECT1 = (Uint16)((Uint32)&Cla1Task1 -(Uint32)&Cla1Prog_Start);
     Cla1Regs.MVECT7 = (Uint16)((Uint32)&Cla1Task7 -(Uint32)&Cla1Prog_Start);
     Cla1Regs.MVECT8 = (Uint16)((Uint32)&Cla1Task8 -(Uint32)&Cla1Prog_Start);
-    Cla1Regs.MPISRCSEL1.bit.PERINT1SEL  = CLA_INT1_ADCINT1;
+    
+    
+   // Copy the CLA program code from its load address to the CLA program memory
+   // Once done, assign the program memory to the CLA
+   //
+   // Make sure there are at least two SYSCLKOUT cycles between assigning
+   // the memory to the CLA and when an interrupt comes in
+   // Call this function even if Load and Run address is the same!  
+    memcpy((uint16_t *)&Cla1funcsRunStart,(uint16_t *)&Cla1funcsLoadStart, (unsigned long)&Cla1funcsLoadSize);
+    
+    asm("   RPT #3 || NOP");
+    
     Cla1Regs.MMEMCFG.bit.PROGE = 1;          // Map CLA program memory to the CLA
     Cla1Regs.MMEMCFG.bit.RAM0E   = 1;
     Cla1Regs.MMEMCFG.bit.RAM1E   = 1;
+    
+    // Enable the IACK instruction to start a task
+    // Enable the CLA interrupt 8 and interrupt 2
+   	asm("   RPT #3 || NOP"); 
+    
     Cla1Regs.MCTL.bit.IACKE = 1;             // Enable IACK to start tasks via software
+        
+    Cla1Regs.MPISRCSEL1.bit.PERINT1SEL  = CLA_INT1_ADCINT1;
+
     Cla1Regs.MIER.all = (M_INT8 | M_INT7 | M_INT1);   // Enable Task 8 , Task 7 and Task 1
+    
+    asm("   RPT #3 || NOP"); 
+    
+    Cla1ForceTask8();
+    
     EDIS;
-
-    Cla1ForceTask8andWait();
-
+    
     return NO_ERROR;
 }
 
@@ -377,9 +398,14 @@ static int32_t device_initEPWM(void)
     //    EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
 
     // ADC trigger
-    EPwm1Regs.ETSEL.bit.SOCAEN   = 1;
+    EPwm1Regs.ETSEL.bit.SOCAEN   = 1; // Enable SOC on A group
     EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_ZERO;
     EPwm1Regs.ETPS.bit.SOCAPRD   = ET_1ST;
+
+    EPwm1Regs.ETSEL.bit.SOCBEN   = 1;        // Enable SOC on B group
+    EPwm1Regs.ETSEL.bit.SOCBSEL  = ET_CTR_ZERO;        // Select SOC from from CPMA on upcount
+    EPwm1Regs.ETPS.bit.SOCBPRD   = ET_1ST;        // Generate pulse on 1st event
+
 
     // EPWM Module 2 config
     EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
@@ -645,47 +671,45 @@ static int32_t device_initADC(void)
     AdcRegs.INTSEL1N2.bit.INT1CONT = 0;     // set ADCInterrupt 1 to auto clr
     AdcRegs.ADCINTSOCSEL1.all = 0x0000;     // No ADCInterrupt will trigger SOCx
     AdcRegs.ADCINTSOCSEL2.all = 0x0000;
-    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN0 = 1;
-    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN2 = 1;
-    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN4 = 1;
+//    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN0 = 1;
+//    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN2 = 1;
+//    AdcRegs.ADCSAMPLEMODE.bit.SIMULEN4 = 1;
 
     AdcRegs.ADCSOC0CTL.bit.CHSEL    = 2;    // A2 - Ifb_Sum
-    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 5;    // ADCTRIG5 – ePWM1, ADCSOCA
-    AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC0CTL.bit.CHSEL    = 5;    // A5 - Ifb_W
-    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 5;    // ADCTRIG5 – ePWM1, ADCSOCA
-    AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC4CTL.bit.CHSEL    = 6;    // A6 - Vfb_Bus
-    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
+    AdcRegs.ADCSOC1CTL.bit.CHSEL    = 5;    // A2 - Ifb_Sum -> double sampling for errata silicon
+    AdcRegs.ADCSOC2CTL.bit.CHSEL    = 5;    // A5 - Ifb_W
+    AdcRegs.ADCSOC3CTL.bit.CHSEL    = 6;    // A6 - Vfb_Bus
     AdcRegs.ADCSOC4CTL.bit.CHSEL    = 7;    // A7 - Vfb_Bus
-    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC3CTL.bit.CHSEL    = 11;   // B3 - Ifb_U
-    AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC3CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
+    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 11;   // B3 - Ifb_U
     AdcRegs.ADCSOC6CTL.bit.CHSEL    = 12;   // B4 - Vfb_W
+    AdcRegs.ADCSOC7CTL.bit.CHSEL    = 13;   // B5 - Ifb_V
+    AdcRegs.ADCSOC8CTL.bit.CHSEL    = 14;   // B6 - Vfb_V
+    AdcRegs.ADCSOC9CTL.bit.CHSEL    = 15;   // B7 - Vfb_U
+
+    // ADCTRIG5 – ePWM1, ADCSOCA
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC1CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC2CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
     AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC6CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    AdcRegs.ADCSOC7CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC8CTL.bit.TRIGSEL  = 5;
+    AdcRegs.ADCSOC9CTL.bit.TRIGSEL  = 5;
 
-    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 13;   // B5 - Ifb_V
-    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 14;   // B6 - Vfb_V
-    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
-
-    AdcRegs.ADCSOC5CTL.bit.CHSEL    = 15;   // B7 - Vfb_U
-    AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = 5;
-    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    // set SOC0 S/H Window to 9 ADC Clock Cycles, (8 ACQPS plus 1)
+    AdcRegs.ADCSOC0CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC1CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC2CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC3CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC4CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC5CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC6CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC7CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC8CTL.bit.ACQPS    = 8;
+    AdcRegs.ADCSOC9CTL.bit.TRIGSEL  = 5;
     EDIS;
-
 
     return NO_ERROR;
 }

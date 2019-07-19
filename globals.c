@@ -56,6 +56,8 @@ float cla_Ki_Volt_1=Ki_Volt_default;
 float cla_Vout1=5.0;
 #pragma DATA_SECTION(cla_Vout2,"Cla1ToCpuMsgRAM");
 float cla_Vout2=5.0;
+#pragma DATA_SECTION(cla_Vout3,"Cla1ToCpuMsgRAM");
+float cla_Vout3=5.0;
 
 //Measured Values - Voltage
 #pragma DATA_SECTION(cla_Iout1,"Cla1ToCpuMsgRAM");
@@ -64,6 +66,9 @@ float cla_Iout1=5.0;
 float cla_Iout2=5.0;
 #pragma DATA_SECTION(cla_Iout3,"Cla1ToCpuMsgRAM");
 float cla_Iout3=5.0;
+#pragma DATA_SECTION(cla_Iout123,"Cla1ToCpuMsgRAM");
+float cla_Iout123=5.0;
+
 
 //Ramp Values Current
 #pragma DATA_SECTION(cla_Ramp1_Curr,"Cla1ToCpuMsgRAM");
