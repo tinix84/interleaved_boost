@@ -88,10 +88,32 @@ float cla_Ramp3_Curr=5.0;
 //===============================================
 // Variables - CLA
 //===============================================
+
+//Ramp Values Voltage
+#pragma DATA_SECTION(cla_Ramp1_Volt,"Cla1DataRam0");
+float cla_Ramp1_Volt=5.0;
+#pragma DATA_SECTION(cla_Ramp2_Volt,"Cla1DataRam0");
+float cla_Ramp2_Volt=5.0;
+#pragma DATA_SECTION(cla_Ramp3_Volt,"Cla1DataRam0");
+float cla_Ramp3_Volt=5.0;
+
 // Voltage Controller
 #pragma DATA_SECTION(pi1_Volt, "Cla1DataRam0")
 DCL_PI pi1_Volt = PI_DEFAULTS;
+#pragma DATA_SECTION(pi2_Volt, "Cla1DataRam0")
+DCL_PI pi2_Volt = PI_DEFAULTS;
+#pragma DATA_SECTION(pi3_Volt, "Cla1DataRam0")
+DCL_PI pi3_Volt = PI_DEFAULTS;
 
+// Debug Variables
+#pragma DATA_SECTION(pi_debug_Volt_max, "Cla1DataRam0")
+float pi_debug_Volt_max;
+#pragma DATA_SECTION(pi_debug_Volt_min, "Cla1DataRam0")
+float pi_debug_Volt_min;
+#pragma DATA_SECTION(pi_debug_Curr_max, "Cla1DataRam0")
+float pi_debug_Curr_max;
+#pragma DATA_SECTION(pi_debug_Curr_min, "Cla1DataRam0")
+float pi_debug_Curr_min;
 
 
 //===============================================

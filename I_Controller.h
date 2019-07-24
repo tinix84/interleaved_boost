@@ -55,5 +55,19 @@ void  init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, flo
         cntl.ys = __mminf32(cntl.ys, cntl.sat_max);             \
         cntl.y1 = cntl.y;                                      \
 
+typedef struct {
+        short PeriodMax;      // Parameter: PWM Half-Period in CPU clock cycles
+        short HalfPerMax;     // Parameter: Half of PeriodMax
+        short Deadband;       // Parameter: PWM deadband in CPU clock cycles
+        float MfuncC1;        // Input: EPWM1 A&B Duty cycle ratio
+        float MfuncC2;        // Input: EPWM2 A&B Duty cycle ratio
+        float MfuncC3;        // Input: EPWM3 A&B Duty cycle ratio
+        } PWMDRV_3phInv_CLA ;
+
+#define PWMDRV_3phInv_CLA_MACRO(pwm1)                                              \
+     EPwm1Regs.CMPA.half.CMPA = pwm1.MfuncC1*pwm1.HalfPerMax + pwm1.HalfPerMax; \
+     EPwm2Regs.CMPA.half.CMPA = pwm1.MfuncC2*pwm1.HalfPerMax + pwm1.HalfPerMax; \
+     EPwm3Regs.CMPA.half.CMPA = pwm1.MfuncC3*pwm1.HalfPerMax + pwm1.HalfPerMax; \
+
 
 #endif /* I_CONTROLLER_H_ */

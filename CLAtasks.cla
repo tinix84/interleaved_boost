@@ -22,14 +22,23 @@
 __interrupt void Cla1Task1 ( void )
 {
 
-     cla_Iout123 = AdcResult.ADCRESULT1; // A2 - Ifb_Sum
-     cla_Iout3 = AdcResult.ADCRESULT2; // A5 - Ifb_W
-     cla_Vout1 = AdcResult.ADCRESULT3; // A7 - Vfb_Bus
+    // voltage divider
+    // 9.1k/(4*620k+9.1k)=0.00365593989795508416696798039452
+    // 800V == 2.92475 == 3630 => 0.22038567493112947658402203856749 V/LSB
+
+    cla_Vout1 = ((float)AdcResult.ADCRESULT9)*0.2203856749; // B7 - Vfb_U
+    cla_Vout2 = ((float)AdcResult.ADCRESULT8)*0.2203856749; // B6 - Vfb_V
+    cla_Vout3 = ((float)AdcResult.ADCRESULT6)*0.2203856749; // B4 - Vfb_W
+//    cla_Ramp1_Volt = DCL_runPI_L2(&pi1_Volt, cla_Vref1, cla_Vout1);
+//    EPwm1Regs.CMPA.half.CMPA = 65536 * cla_Ramp1_Volt; // adjust duty for output EPWM1A
+//    EPwm2Regs.CMPA.half.CMPA = 65536 * cla_Ramp1_Volt;; // adjust duty for output EPWM2A
+
+
      cla_Iout1 = AdcResult.ADCRESULT5; // B3 - Ifb_U
-     cla_Vout3 = AdcResult.ADCRESULT4; // B4 - Vfb_W
      cla_Iout2 = AdcResult.ADCRESULT7; // B5 - Ifb_V
-     cla_Vout2 = AdcResult.ADCRESULT8; // B6 - Vfb_V
-     cla_Vout1 = AdcResult.ADCRESULT9; // B7 - Vfb_U
+     cla_Iout3 = AdcResult.ADCRESULT2; // A5 - Ifb_W
+//     clarke1.As= ((AdcResult.ADCRESULT1*0.000244140625)-0.501)*2;
+
 
 }
 
@@ -65,7 +74,7 @@ __interrupt void Cla1Task8 ( void )
     pi1_Volt.Ki = 0.015f; //472500.0f / 200e3;
     pi1_Volt.Umax = 0.96130371f;
     pi1_Volt.Umin = 0.05f;
-    pi1_Volt.i10 = 1.0f;
+    pi1_Volt.i10 = 0.99f;
     pi1_Volt.i6 = 1.0f;
 
 

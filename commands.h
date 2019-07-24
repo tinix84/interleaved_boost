@@ -18,6 +18,7 @@ typedef enum {
     disableVLS = 12,
     disableVHS = 13,
     setDeadtime = 14,
+    setOutputVoltage = 15,
     /* ERROR commands (250-255)*/
     errorLength = 250,
     errorChecksum = 251,

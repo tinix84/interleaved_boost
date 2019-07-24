@@ -235,6 +235,11 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             actual_deadtime_cnt = new_deadtime_cnt;
             break;
 
+        case setOutputVoltage:
+//            new_Vout = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
+//            cla_Vref1 = SAT32(new_Vout, VOUT_MAX, VOUT_MIN)
+            break;
+
         case enablePhaseAll:
             device_setALLDriverEnable();
             break;

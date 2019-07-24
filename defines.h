@@ -83,7 +83,6 @@
 //#define CPU_RATE   20.000L   // for a 50MHz CPU clock speed  (SYSCLKOUT)
 //#define CPU_RATE   25.000L   // for a 40MHz CPU clock speed  (SYSCLKOUT)
 //#define CPU_RATE   33.333L   // for a 30MHz CPU clock speed  (SYSCLKOUT)
-
 #define DEVICE_SYSCLK_FREQ 60000000U
 
 /* EPWM control defines */
@@ -141,14 +140,16 @@
 #define ADC_IL_COMPARATOR   2
 #define SFRA_TYPE           1
 
-#define OUTPUT_VOLTAGE      390
-#define VIN_MAX_SENSE       402.07
-#define VBUS_MAX_SENSE      510.99
-#define IL_MAX_SENSE        19.8
-#define VBUS_RATED_VOLTS    390.0
+#define VIN_MAX_SENSE_V       550
+#define VBUS_MAX_SENSE_V      510.99
+#define IL_MAX_SENSE_V        19.8
 
-#define VBUS_MIN ((int32)((160.0/VBUS_MAX_SENSE)*4095*4095))
-#define VBUS_OVP_THRSHLD ((int32)((435.0/VBUS_MAX_SENSE)*4095*4095)) //435V
+#define VBUS_MIN_VOLTS    600.0
+#define VBUS_RATED_VOLTS    750.0
+#define VBUS_OVP_THRSHLD_VOLTS    800.0
+
+#define VBUS_MIN_LSB ((int32)((100.0/VBUS_MAX_SENSE)*4095*4095))
+#define VBUS_OVP_THRSHLD_LSB ((int32)((435.0/VBUS_MAX_SENSE)*4095*4095)) //435V
 
 #define VBUS_TARGET         ((int32)((VBUS_RATED_VOLTS/VBUS_MAX_SENSE)*4095*4095)) //395V
 #define VBUS_ERROR_NL_CNTRL_THRSHLD ((int32)((15.0/VBUS_MAX_SENSE)*4095*4095)) //Vbus error threshold to activate NL Vloop control
@@ -165,12 +166,12 @@
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define ABS(a)   ((((a)>(0))?(a):(-a)))
 
-/* float macros */
-#define MINF32(a, b) __fmin((a), (b))
-#define MAXF32(a, b) __fmax((a), (b))
-#define ABSF32(a) __fmax((-a),(a))
-#define SATF32(a, amax, amin) __fmax(__fmin((a), (amax)), (amin));
-#define RATEF32(target, var, step) ((var) + __fmax(__fmin(((target)-(var)), (step)), -(step)))
+/* float macros for CPU */
+#define MIN32(a, b) __min((a), (b))
+#define MAX32(a, b) __max((a), (b))
+#define ABS32(a) __max((-a),(a))
+#define SAT32(a, amax, amin) __max(__min((a), (amax)), (amin));
+#define RATE32(target, var, step) ((var) + __max(__min(((target)-(var)), (step)), -(step)))
 
 /* Macro for 1us_delay */
 
