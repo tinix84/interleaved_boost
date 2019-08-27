@@ -280,6 +280,15 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             device_driverDisableVHS();
             break;
 
+        case disableV:
+            device_driverDisableVLS();
+            device_driverDisableVHS();
+            break;
+
+        case disableU:
+            device_driverDisableULS();
+            device_driverDisableUHS();            
+            break;
 
             /*
              ******************************************************************

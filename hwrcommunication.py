@@ -153,9 +153,11 @@ def run(hwr):
     
 def main():
 
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
     hwr = HWRCommunication(comport='COM5', 
                            baudrate=9600, 
-                           commands_fn="./commands.h")
+                           commands_fn=(("%s/commands.h") % dir_path ))
          
 
     if len(sys.argv) > 1:
