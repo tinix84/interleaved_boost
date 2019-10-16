@@ -59,19 +59,6 @@ extern void updateDutyEPwm(uint16_t duty);
 /* =================== public inline functions ======================== */
 /* ==================================================================== */
 
-/**
- * Macro to calculate a integral controller
- * @param cntl - I_CONTROLLER structure, ref - Reference Value, value - actual value to compare
- * @return I_CONTROLLER structure
- */
-#define run_I_CONTROLLER_CLA_MACRO(cntl, ref, value)            \
-        cntl.u = ref - value;                                   \
-        cntl.e = cntl.ys - cntl.y;                              \
-        cntl.y = cntl.y1 + cntl.Vi * cntl.u + cntl.Vr * cntl.e; \
-        cntl.ys = __mmaxf32(cntl.y, cntl.sat_min);              \
-        cntl.ys = __mminf32(cntl.ys, cntl.sat_max);             \
-        cntl.y1 = cntl.y;
-
 /* Enable gate drivers for Phase U */
 extern inline int32_t device_driverEnableVLS(void)
 {

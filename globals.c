@@ -6,12 +6,12 @@
 #include <stdint.h>
 #include "device.h"
 #include "application.h"
-
 #include "DSP2803x_Device.h"      // DSP2803x Headerfile Include File
 #include "DSP2803x_Cla_typedefs.h"// DSP2803x CLA Type definitions
 #include "DSP2803x_Cla_defines.h"
 #include "DSP2803x_Cla.h"
 #include "DCL.h"
+#include "I_Controller.h"
 
 /* ==================================================================== */
 /* ============================ constants ============================= */
@@ -27,110 +27,74 @@
 //===============================================
 
 //Reference Values - Voltage
-#pragma DATA_SECTION(cla_Vref1,"CpuToCla1MsgRAM");
-float cla_Vref1=Vref_default;
-#pragma DATA_SECTION(cla_Vref2,"CpuToCla1MsgRAM");
-float cla_Vref2=Vref_default;
+#pragma DATA_SECTION(cla_VrefU,"CpuToCla1MsgRAM");
+float cla_VrefU=Vref_default;
+#pragma DATA_SECTION(cla_VrefV,"CpuToCla1MsgRAM");
+float cla_VrefV=Vref_default;
+#pragma DATA_SECTION(cla_VrefW,"CpuToCla1MsgRAM");
+float cla_VrefW=Vref_default;
 
 //Reference Values - Current
-#pragma DATA_SECTION(cla_Iref1,"CpuToCla1MsgRAM");
-float cla_Iref1=Iref_default;
-#pragma DATA_SECTION(cla_Iref2,"CpuToCla1MsgRAM");
-float cla_Iref2=Iref_default;
-#pragma DATA_SECTION(cla_Iref3,"CpuToCla1MsgRAM");
-float cla_Iref3=Iref_default;
+#pragma DATA_SECTION(cla_IrefU,"CpuToCla1MsgRAM");
+float cla_IrefU=Iref_default;
+#pragma DATA_SECTION(cla_IrefV,"CpuToCla1MsgRAM");
+float cla_IrefV=Iref_default;
+#pragma DATA_SECTION(cla_IrefW,"CpuToCla1MsgRAM");
+float cla_IrefW=Iref_default;
+
+#pragma DATA_SECTION(actual_pwm_period,"CpuToCla1MsgRAM");
+uint32_t actual_pwm_period = EPWM_A_INIT_PERIOD;
+#pragma DATA_SECTION(actual_duty_cnt,"CpuToCla1MsgRAM");
+uint32_t actual_duty_cnt = EPWM_A_INIT_CMPA;
 
 //Controller Coefficients
-#pragma DATA_SECTION(cla_Kp_Volt_1,"CpuToCla1MsgRAM");
-float cla_Kp_Volt_1=Kp_Volt_default;
-
-#pragma DATA_SECTION(cla_Ki_Volt_1,"CpuToCla1MsgRAM");
-float cla_Ki_Volt_1=Ki_Volt_default;
+#pragma DATA_SECTION(cla_CC_Ki,"Cla1DataRam0");
+float cla_CC_Ki;
+#pragma DATA_SECTION(cla_CC_Kr,"Cla1DataRam0");
+float cla_CC_Kr;
 
 //===============================================
 // Variables - CLA to CPU
 //===============================================
 
 //Measured Values - Voltage
-#pragma DATA_SECTION(cla_Vout1,"Cla1ToCpuMsgRAM");
-float cla_Vout1=5.0;
-#pragma DATA_SECTION(cla_Vout2,"Cla1ToCpuMsgRAM");
-float cla_Vout2=5.0;
-#pragma DATA_SECTION(cla_Vout3,"Cla1ToCpuMsgRAM");
-float cla_Vout3=5.0;
+#pragma DATA_SECTION(cla_VoutU,"Cla1ToCpuMsgRAM");
+float cla_VoutU=20.0;
+#pragma DATA_SECTION(cla_VoutV,"Cla1ToCpuMsgRAM");
+float cla_VoutV=20.0;
+#pragma DATA_SECTION(cla_VoutW,"Cla1ToCpuMsgRAM");
+float cla_VoutW=20.0;
 
-//Measured Values - Voltage
-#pragma DATA_SECTION(cla_Iout1,"Cla1ToCpuMsgRAM");
-float cla_Iout1=5.0;
-#pragma DATA_SECTION(cla_Iout2,"Cla1ToCpuMsgRAM");
-float cla_Iout2=5.0;
-#pragma DATA_SECTION(cla_Iout3,"Cla1ToCpuMsgRAM");
-float cla_Iout3=5.0;
-#pragma DATA_SECTION(cla_Iout123,"Cla1ToCpuMsgRAM");
-float cla_Iout123=5.0;
+//Measured Values - Current
+#pragma DATA_SECTION(cla_IoutU,"Cla1ToCpuMsgRAM");
+float cla_IoutU=5.0;
+#pragma DATA_SECTION(cla_IoutV,"Cla1ToCpuMsgRAM");
+float cla_IoutV=5.0;
+#pragma DATA_SECTION(cla_IoutW,"Cla1ToCpuMsgRAM");
+float cla_IoutW=5.0;
 
-
-//Ramp Values Current
-#pragma DATA_SECTION(cla_Ramp1_Curr,"Cla1ToCpuMsgRAM");
-float cla_Ramp1_Curr=5.0;
-#pragma DATA_SECTION(cla_Ramp2_Curr,"Cla1ToCpuMsgRAM");
-float cla_Ramp2_Curr=5.0;
-#pragma DATA_SECTION(cla_Ramp3_Curr,"Cla1ToCpuMsgRAM");
-float cla_Ramp3_Curr=5.0;
-
-//#pragma DATA_SECTION(i1_Curr, "Cla1ToCpuMsgRAM")
-//I_CONTROLLER i1_Curr;
-//#pragma DATA_SECTION(i2_Curr, "Cla1ToCpuMsgRAM")
-//I_CONTROLLER i2_Curr;
-//#pragma DATA_SECTION(i3_Curr, "Cla1ToCpuMsgRAM")
-//I_CONTROLLER i3_Curr;
 
 //===============================================
 // Variables - CLA
 //===============================================
 
 //Ramp Values Voltage
-#pragma DATA_SECTION(cla_Ramp1_Volt,"Cla1DataRam0");
-float cla_Ramp1_Volt=5.0;
-#pragma DATA_SECTION(cla_Ramp2_Volt,"Cla1DataRam0");
-float cla_Ramp2_Volt=5.0;
-#pragma DATA_SECTION(cla_Ramp3_Volt,"Cla1DataRam0");
-float cla_Ramp3_Volt=5.0;
+#pragma DATA_SECTION(cla_Ramp_Volt,"Cla1DataRam0");
+float cla_Ramp_Volt=0.0f;
+#pragma DATA_SECTION(min_duty_f,"Cla1DataRam0");
+float min_duty_f=0.0f;
+
+// I Controller Section
+#pragma DATA_SECTION(cla_CC_Ki,"Cla1DataRam0");
+float cla_CC_Ki;
+#pragma DATA_SECTION(cla_CC_Kr,"Cla1DataRam0");
+float cla_CC_Kr;
 
 // Voltage Controller
-#pragma DATA_SECTION(pi1_Volt, "Cla1DataRam0")
-DCL_PI pi1_Volt = PI_DEFAULTS;
-#pragma DATA_SECTION(pi2_Volt, "Cla1DataRam0")
-DCL_PI pi2_Volt = PI_DEFAULTS;
-#pragma DATA_SECTION(pi3_Volt, "Cla1DataRam0")
-DCL_PI pi3_Volt = PI_DEFAULTS;
-
-// Debug Variables
-#pragma DATA_SECTION(pi_debug_Volt_max, "Cla1DataRam0")
-float pi_debug_Volt_max;
-#pragma DATA_SECTION(pi_debug_Volt_min, "Cla1DataRam0")
-float pi_debug_Volt_min;
-#pragma DATA_SECTION(pi_debug_Curr_max, "Cla1DataRam0")
-float pi_debug_Curr_max;
-#pragma DATA_SECTION(pi_debug_Curr_min, "Cla1DataRam0")
-float pi_debug_Curr_min;
-
-
-//===============================================
-// Controller
-//===============================================
-
-typedef volatile struct {
-    float Vi;       //!< Integral Gain
-    float Vr;       //!< Gain from Feedback (Saturation)
-    float u;        //!< Input
-    float e;        //!< Saturation Difference
-    float y;        //!< unsaturated Output
-    float y1;       //!< old output value
-    float ys;       //!< saturated Output
-    float sat_min;  //!< Lower saturation limit
-    float sat_max;  //!< Upper saturation limit
-} I_CONTROLLER;
+//#pragma DATA_SECTION(pi1_Volt, "Cla1DataRam0")
+//DCL_PI pi1_Volt = PI_DEFAULTS;
+#pragma DATA_SECTION(pi1_Volt, "Cla1ToCpuMsgRAM")
+I_CONTROLLER pi1_Volt;
 
 //===============================================
 // System Monitor data
@@ -166,11 +130,13 @@ uint16_t  EPwm3_DB_Direction;
 // PWM data
 //===============================================
 
-uint32_t actual_duty_cnt = 0;
-uint32_t actual_phdly_cnt = 0;
-uint32_t actual_pwm_period = 0;
-uint32_t actual_deadtime_cnt = 0;
+
+uint32_t actual_phdly_cnt = EPWM_A_INIT_PHASE;
+
+uint32_t actual_deadtime_cnt = EPWM_A_INIT_DEADBAND;
 uint32_t new_deadtime_ns = 0;
+float new_Vout = 0.0f;
+float max_Vout_step = 10.0f;
 
 
 /* ==================================================================== */

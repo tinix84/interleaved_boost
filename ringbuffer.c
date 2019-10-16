@@ -54,7 +54,7 @@ int32_t ringbuffer_length(ringbuffer_t * rbuf)
     else
     {
         status = (((int16_t)rbuf->size - (int16_t)rbuf->tail) +
-                  (int16_t)rbuf->head);
+                (int16_t)rbuf->head);
     }
     return status;
 }

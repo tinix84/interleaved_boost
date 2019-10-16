@@ -130,29 +130,29 @@
 #define COMM_START 0x55U
 #define SCI_BUFFER_SIZE 16
 
-/* Control loop define */
-#define PWM_NO              1
-#define ADC_TRIG_SOURCE     5
-#define ADC_PIN_VOUT        2
-#define ADC_PIN_VIN_L       10
-#define ADC_PIN_VIN_N       8
-#define ADC_PIN_IL_AVG      4
-#define ADC_IL_COMPARATOR   2
-#define SFRA_TYPE           1
-
-#define VIN_MAX_SENSE_V       550
-#define VBUS_MAX_SENSE_V      510.99
-#define IL_MAX_SENSE_V        19.8
-
-#define VBUS_MIN_VOLTS    600.0
-#define VBUS_RATED_VOLTS    750.0
-#define VBUS_OVP_THRSHLD_VOLTS    800.0
-
-#define VBUS_MIN_LSB ((int32)((100.0/VBUS_MAX_SENSE)*4095*4095))
-#define VBUS_OVP_THRSHLD_LSB ((int32)((435.0/VBUS_MAX_SENSE)*4095*4095)) //435V
-
-#define VBUS_TARGET         ((int32)((VBUS_RATED_VOLTS/VBUS_MAX_SENSE)*4095*4095)) //395V
-#define VBUS_ERROR_NL_CNTRL_THRSHLD ((int32)((15.0/VBUS_MAX_SENSE)*4095*4095)) //Vbus error threshold to activate NL Vloop control
+///* Control loop define */
+//#define PWM_NO              1
+//#define ADC_TRIG_SOURCE     5
+//#define ADC_PIN_VOUT        2
+//#define ADC_PIN_VIN_L       10
+//#define ADC_PIN_VIN_N       8
+//#define ADC_PIN_IL_AVG      4
+//#define ADC_IL_COMPARATOR   2
+//#define SFRA_TYPE           1
+//
+//#define VIN_MAX_SENSE_V       550
+//#define VBUS_MAX_SENSE_V      510.99
+//#define IL_MAX_SENSE_V        19.8
+//
+//#define VBUS_MIN_VOLTS    600.0
+//#define VBUS_RATED_VOLTS    750.0
+//#define VBUS_OVP_THRSHLD_VOLTS    800.0
+//
+//#define VBUS_MIN_LSB ((int32)((100.0/VBUS_MAX_SENSE)*4095*4095))
+//#define VBUS_OVP_THRSHLD_LSB ((int32)((435.0/VBUS_MAX_SENSE)*4095*4095)) //435V
+//
+//#define VBUS_TARGET         ((int32)((VBUS_RATED_VOLTS/VBUS_MAX_SENSE)*4095*4095)) //395V
+//#define VBUS_ERROR_NL_CNTRL_THRSHLD ((int32)((15.0/VBUS_MAX_SENSE)*4095*4095)) //Vbus error threshold to activate NL Vloop control
 
 /*ADC defines*/
 #define ADC_usDELAY  1000L
@@ -164,7 +164,8 @@
 /* Int macros */
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
-#define ABS(a)   ((((a)>(0))?(a):(-a)))
+#define ABS(a)   (((a)>(0))?(a):(-(a)))
+#define SAT(a, amax, amin) max(min((a), (amax)), (amin));
 
 /* float macros for CPU */
 #define MIN32(a, b) __min((a), (b))
@@ -202,14 +203,8 @@
 //==================================================================================
 // Comp Settings
 //----------------------------------------------------------------------------------
-#define Vref_default 400
-#define Iref_default 0.5
-
-#define Kp_Volt_default 0.567f
-#define Ki_Volt_default 0.0223f
-
-#define Kp_Curr_default 0.567f
-#define Ki_Curr_default 0.0223f
+#define Vref_default 10.0f
+#define Iref_default 0.5f
 
 
 //==================================================================================

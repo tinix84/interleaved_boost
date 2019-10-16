@@ -1,5 +1,5 @@
 /*
- * control.h
+ * application.h
  *
  *  Created on: 23.07.2018
  *      Author: ies
@@ -10,6 +10,7 @@
 
 /* Standard imports */
 #include <stdint.h>
+
 /* Common imports */
 #include "ringbuffer.h"
 #include "commands.h"
@@ -52,10 +53,9 @@ typedef struct __commSerialFrame_t{
 }commSerialFrame_t;
 
 
-/* General typedefs */
-
-
-
+/*
+ * General typedefs
+ */
 typedef struct __array4{
     uint16_t data0;
     uint16_t data1;
@@ -84,8 +84,6 @@ static inline int32_t application_blink(void)
     GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1;
     return 0;
 }
-
-
 
 #endif /* APPLICATION_H_ */
 

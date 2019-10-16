@@ -48,7 +48,6 @@ void main(void)
     // Step 6. IDLE loop. Just sit and loop forever (optional):
     for(;;)
     {
-
         err = application_serialHandler();
 
     };

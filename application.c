@@ -5,21 +5,29 @@
  *      Author: tinivella
  */
 #include <stdint.h>
-
 #include "application.h"
 
 
 
-/* Private functions */
-/* Initialization functions */
+/*
+ * Private functions
+ */
+
+/*
+ * Initialization functions
+ */
 static int32_t application_initSerial(void);
 
-/* Serial driver functions */
+/*
+ * Serial driver functions
+ */
 static int32_t application_processFrame(commSerialFrame_t *frame);
 static int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame);
 static int32_t application_putFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame);
 
-/* Miscellaneous functions */
+/*
+ * Miscellaneous functions
+ */
 
 /*
  * Initialization sequence for the control module.
@@ -131,10 +139,6 @@ int32_t application_serialHandler(void)
     return status;
 }
 
-
-
-
-
 /*
  * Frame processing
  *
@@ -147,11 +151,14 @@ int32_t application_processFrame(commSerialFrame_t *frame)
     extern uint32_t actual_phdly_cnt;
     extern uint32_t actual_deadtime_cnt;
     extern uint32_t new_deadtime_ns;
+    extern float cla_Vref1;
+    extern uint32_t new_Vout;
 
     uint32_t new_duty_cnt = 0;
     uint32_t new_pwm_period = 0;
     uint32_t new_phdly_cnt = 0;
     uint32_t new_deadtime_cnt = 0;
+
 
     array4 temp_4;
     uint16_t data_offset = 0;
@@ -236,8 +243,7 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             break;
 
         case setOutputVoltage:
-//            new_Vout = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
-//            cla_Vref1 = SAT32(new_Vout, VOUT_MAX, VOUT_MIN)
+            new_Vout = (float)((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
             break;
 
         case enablePhaseAll:
@@ -335,6 +341,9 @@ int32_t application_processFrame(commSerialFrame_t *frame)
     return 0;
 }
 
+/*
+ * TBD
+ */
 int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame)
 {
     extern commFrameStates_e rxstate;
@@ -451,7 +460,6 @@ int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame)
 
     return ret;
 }
-
 
 /*
  * Decode complete frame into ringbuffer.

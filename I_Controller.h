@@ -14,17 +14,21 @@
 #include "DSP2803x_Cla_defines.h"
 #include "DSP2803x_Cla.h"
 
+#ifndef C2000_IEEE754_TYPES
+#define C2000_IEEE754_TYPES
+typedef float float32_t;
+#endif
 
 typedef volatile struct {
-    float Vi;       //!< Integral Gain
-    float Vr;       //!< Gain from Feedback (Saturation)
-    float u;        //!< Input
-    float e;        //!< Saturation Difference
-    float y;        //!< unsaturated Output
-    float y1;       //!< old output value
-    float ys;       //!< saturated Output
-    float sat_min;  //!< Lower saturation limit
-    float sat_max;  //!< Upper saturation limit
+    float32_t Vi;       //!< Integral Gain
+    float32_t Vr;       //!< Gain from Feedback (Saturation)
+    float32_t u;        //!< Input
+    float32_t e;        //!< Saturation Difference
+    float32_t y;        //!< unsaturated Output
+    float32_t y1;       //!< old output value
+    float32_t ys;       //!< saturated Output
+    float32_t sat_min;  //!< Lower saturation limit
+    float32_t sat_max;  //!< Upper saturation limit
 } I_CONTROLLER;
 
 //! \brief          Defines default values to initialise the DCL_PID structure
@@ -37,9 +41,9 @@ typedef volatile struct {
 //! \param[in] value   The measured feedback value
 //! \return         The control effort
 //!
-float run_I_CONTROLLER(I_CONTROLLER *cntl, float ref, float value);
+float32_t run_I_CONTROLLER(I_CONTROLLER *cntl, float32_t ref, float32_t value);
 
-void  init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, float max);
+void  init_I_CONTROLLER(I_CONTROLLER *cntl, float32_t V_i, float32_t V_r, float32_t min, float32_t max);
 
 
 /**
@@ -54,20 +58,6 @@ void  init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, flo
         cntl.ys = __mmaxf32(cntl.y, cntl.sat_min);              \
         cntl.ys = __mminf32(cntl.ys, cntl.sat_max);             \
         cntl.y1 = cntl.y;                                      \
-
-typedef struct {
-        short PeriodMax;      // Parameter: PWM Half-Period in CPU clock cycles
-        short HalfPerMax;     // Parameter: Half of PeriodMax
-        short Deadband;       // Parameter: PWM deadband in CPU clock cycles
-        float MfuncC1;        // Input: EPWM1 A&B Duty cycle ratio
-        float MfuncC2;        // Input: EPWM2 A&B Duty cycle ratio
-        float MfuncC3;        // Input: EPWM3 A&B Duty cycle ratio
-        } PWMDRV_3phInv_CLA ;
-
-#define PWMDRV_3phInv_CLA_MACRO(pwm1)                                              \
-     EPwm1Regs.CMPA.half.CMPA = pwm1.MfuncC1*pwm1.HalfPerMax + pwm1.HalfPerMax; \
-     EPwm2Regs.CMPA.half.CMPA = pwm1.MfuncC2*pwm1.HalfPerMax + pwm1.HalfPerMax; \
-     EPwm3Regs.CMPA.half.CMPA = pwm1.MfuncC3*pwm1.HalfPerMax + pwm1.HalfPerMax; \
 
 
 #endif /* I_CONTROLLER_H_ */

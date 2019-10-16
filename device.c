@@ -94,22 +94,20 @@ __interrupt void ISR_ILLEGAL(void);
 /* ===================== All functions by section ===================== */
 /* ==================================================================== */
 
-
 /*
  * Perform initialization of all peripherals in the correct order
  */
 int32_t device_init(void)
 {
-    DINT;
-
     int32_t err = NO_ERROR;
 
+    // Step 1. Initialize System Control:
     /* Initialize PLL, calibrations and clock system*/
     device_initSysCtl();
-
     /* Initialize CPU Memory */
     device_initCPUMemory();
 
+    // Step 2. Initialize GPIO:
     /* Initialize board related peripherals */
     // Connect ePWM1, ePWM2, ePWM3 to GPIO pins, so that in not necessary toggle function in ISR
     device_initGPIO();
@@ -119,14 +117,11 @@ int32_t device_init(void)
 
     /* Initialize the CLA Memory */
     device_initCLA();
-
     /* Init CPU Timers */
     device_initCPUTimer();
-    ConfigCpuTimer(&CpuTimer1, 60, 100);   //CPU Timer 1 interrupt after 0.5 ms (at 60MHz CPU freq.)
 
     /* Init watchdog */
     // device_initWatchdog();
-
 
     /* Initialize all peripherals */
     device_initSCI();
@@ -136,6 +131,11 @@ int32_t device_init(void)
 
     /* Clear all TZ flags before starting*/
     //device_setALLClearTZFlags();
+
+    DINT;
+    // Disable CPU interrupts and clear all CPU interrupt flags:
+    IER = 0x0000;
+    IFR = 0x0000;
 
     /* Register and enable all used interrupts at PIE*/
     //device_registerInterrupts();
@@ -147,12 +147,12 @@ int32_t device_init(void)
     InitPieVectTable();
 
     EALLOW;  // This is needed to write to EALLOW protected registers
-    PieVectTable.SCIRXINTA = &sciaRXISR;
-    //PieVectTable.SCITXINTA = &sciaTxIsr;
-    PieVectTable.ADCINT1 = &AdcInterruptISR;
     PieVectTable.TINT0 = &cpu_timer0_isr;
     PieVectTable.TINT1 = &cpu_timer1_isr;
 
+    PieVectTable.SCIRXINTA = &sciaRXISR;
+    //PieVectTable.SCITXINTA = &sciaTxIsr;
+    PieVectTable.ADCINT1 = &AdcInterruptISR;
 
     PieCtrlRegs.PIEIER1.bit.INTx1 = 1; // ADCINT1
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1; // Enable TINT0 in the PIE: Group 1 interrupt 7
@@ -169,6 +169,7 @@ int32_t device_init(void)
     IER = 0x100; // Enable CPU INT
     // Enable CPU INT1 which is connected to CPU-Timer 0:
     IER |= M_INT1;
+    IER |= M_INT2;
     // Enable CPU INT3 which is connected to EPWM1-3 INT:
     IER |= M_INT3;
     // Enable CPU INT13 which is connected to ADC INT:
@@ -198,39 +199,36 @@ static int32_t device_initSysCtl(void)
     return NO_ERROR;
 }
 
-
 /* it starts also the timers */
 static int32_t device_initCPUTimer(void)
 {
     EALLOW;
     // Timing sync for background loops
     // Timer period definitions found in PeripheralHeaderIncludes.h
-    CpuTimer0Regs.PRD.all =  mSec0_5 ;      // A tasks
-    CpuTimer1Regs.PRD.all =  mSec50;    // B tasks
-    CpuTimer2Regs.PRD.all =  mSec10;  // C tasks
+    CpuTimer0Regs.PRD.all =  mSec0_5;   // A tasks
+    CpuTimer1Regs.PRD.all =  mSec500;    // B tasks
+    CpuTimer2Regs.PRD.all =  mSec500;    // C tasks
 
-    // Configure CPU-Timer 2 to interrupt every second:
-    // 60MHz CPU Freq, Period (in uSeconds)
-    // Configure CPU Timer interrupt for 20KHz interrupt
-    CpuTimer2Regs.PRD.all = mSec1 * 0.1;
+    CpuTimer0Regs.TCR.bit.TIE = 1;
+    CpuTimer1Regs.TCR.bit.TIE = 1;
+    CpuTimer2Regs.TCR.bit.TIE = 1;
 
-    // Set pre-scale counter to divide by 1 (SYSCLKOUT):
-    CpuTimer2Regs.TPR.all  = 0;
-    CpuTimer2Regs.TPRH.all  = 0;
-
-    // Initialize timer control register:
-    CpuTimer2Regs.TCR.bit.TSS = 1;      // 1 = Stop timer, 0 = Start/Restart Timer
-    CpuTimer2Regs.TCR.bit.TRB = 1;      // 1 = reload timer
-    CpuTimer2Regs.TCR.bit.SOFT = 0;
-    CpuTimer2Regs.TCR.bit.FREE = 0;     // Timer Free Run Disabled
-    CpuTimer2Regs.TCR.bit.TIE = 1;      // 0 = Disable/ 1 = Enable Timer Interrupt
-    CpuTimer2Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
+//    // Set pre-scale counter to divide by 1 (SYSCLKOUT):
+//    CpuTimer2Regs.TPR.all  = 0;
+//    CpuTimer2Regs.TPRH.all  = 0;
+//
+//    // Initialize timer control register:
+//    CpuTimer2Regs.TCR.bit.TSS = 1;      // 1 = Stop timer, 0 = Start/Restart Timer
+//    CpuTimer2Regs.TCR.bit.TRB = 1;      // 1 = reload timer
+//    CpuTimer2Regs.TCR.bit.SOFT = 0;
+//    CpuTimer2Regs.TCR.bit.FREE = 0;     // Timer Free Run Disabled
+//    CpuTimer2Regs.TCR.bit.TIE = 1;      // 0 = Disable/ 1 = Enable Timer Interrupt
+//    CpuTimer2Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
     EDIS;
 
     return NO_ERROR;
 
 }
-
 
 /*
  * Set CPU Memory and copy RAM functions to RAM.
@@ -257,7 +255,6 @@ static int32_t device_initCPUMemory(void)
 
     return NO_ERROR;
 }
-
 
 /*
  * SCIA is used for communication to the PC
@@ -403,7 +400,7 @@ static int32_t device_initEPWM3phInterleaved(void)
     EPwm1Regs.DBFED = EPWM_A_INIT_DEADBAND; // FED = 20 TBCLKs
     EPwm1Regs.DBRED = EPWM_A_INIT_DEADBAND; // RED = 20 TBCLKs
 
-        // EPWM Module 2 config
+    // EPWM Module 2 config
     EPwm2Regs.TBPRD = EPWM_B_INIT_PERIOD; // Period = 900 TBCLK counts
     EPwm2Regs.TBPHS.half.TBPHS = EPWMx_INIT_PHASE; // Phase = 300/900 * 360 = 120 deg
     EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Symmetrical mode
@@ -548,23 +545,6 @@ static int32_t device_initEPWM3phNIBBSpecialModulation(void)
     return NO_ERROR;
 }
 
-/* sciaRXFIFOISR - SCIA Receive FIFO ISR */
-__interrupt void sciaRXISR(void)
-{
-    extern ringbuffer_t SCIARXBufferStruct;
-    uint16_t data;
-
-    /* Read data from RX FIFO */
-    data = SciaRegs.SCIRXBUF.all;
-    /* Write data to ring buffer */
-    ringbuffer_put(&SCIARXBufferStruct, data);
-
-    SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
-    SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
-
-    PieCtrlRegs.PIEACK.all|=0x100;       // Issue PIE ack
-}
-
 static int32_t device_initGPIO(void)
 {
     EALLOW;
@@ -658,103 +638,6 @@ static int32_t device_initGPIO(void)
     GpioCtrlRegs.GPADIR.bit.GPIO11 = 1;     // 1=OUTput,  0=INput
     GpioDataRegs.GPACLEAR.bit.GPIO11 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO11 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-12 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 0;    // 0=GPIO,  1=TZ1,  2=SCITX-A,  3=SPISIMO-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO12 = 1;     // 1=OUTput,  0=INput
-//    GpioDataRegs.GPACLEAR.bit.GPIO12 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO12 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-13 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO13 = 0;    // 0=GPIO,  1=TZ2,  2=Resv,  3=SPISOMI-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO13 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO13 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO13 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-14 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO14 = 0;    // 0=GPIO,  1=TZ3,  2=LINTX-A,  3=SPICLK-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO14 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO14 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO14 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-15 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX1.bit.GPIO15 = 0;    // 0=GPIO,  1=TZ1,  2=LINRX-A,  3=SPISTE-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO15 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO15 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO15 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-16 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0;    // 0=GPIO,  1=SPISIMO-A,  2=Resv,  3=TZ2
-//    GpioCtrlRegs.GPADIR.bit.GPIO16 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO16 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO16 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-17 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 0;    // 0=GPIO,  1=SPISOMI-A,  2=Resv,  3=TZ3
-//    GpioCtrlRegs.GPADIR.bit.GPIO17 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO17 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO17 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-18 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0;    // 0=GPIO,  1=SPICLK-A,  2=LINTX-A,  3=XCLKOUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO18 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO18 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-19 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;    // 0=GPIO,  1=SPISTE-A,  2=LINRX-A,  3=ECAP1
-//    GpioCtrlRegs.GPADIR.bit.GPIO19 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO19 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-20 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO20 = 0;    // 0=GPIO,  1=EQEPA-1,  2=Resv,  3=COMP1OUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO20 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO20 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO20 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-21 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO21 = 0;    // 0=GPIO,  1=EQEPB-1,  2=Resv,  3=COMP2OUT
-//    GpioCtrlRegs.GPADIR.bit.GPIO21 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO21 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO21 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-22 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO22 = 0;    // 0=GPIO,  1=EQEPS-1,  2=Resv,  3=LINTX-A
-//    GpioCtrlRegs.GPADIR.bit.GPIO22 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO22 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-23 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0;    // 0=GPIO,  1=EQEPI-1,  2=Resv,  3=LINRX-A
-//    GpioCtrlRegs.GPADIR.bit.GPIO23 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO23 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO23 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-24 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 0;    // 0=GPIO,  1=ECAP1,  2=Resv,  3=SPISIMO-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO24 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO24 = 1;   // uncomment if --> Set Low initially
-//    GpioDataRegs.GPASET.bit.GPIO24 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-25 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPISOMI-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO25 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO25 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-26 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPICLK-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO26 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO26 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO26 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-27 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO27 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=SPISTE-B
-//    GpioCtrlRegs.GPADIR.bit.GPIO27 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO27 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO27 = 1;     // uncomment if --> Set High initially 
-                                                                                   
     //--------------------------------------------------------------------------------------
     //  GPIO-28 - PIN FUNCTION = SCI-RX
     GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 1;    // 0=GPIO,  1=SCIRX-A,  2=I2CSDA-A,  3=TZ2
@@ -767,30 +650,7 @@ static int32_t device_initGPIO(void)
     //  GpioCtrlRegs.GPADIR.bit.GPIO29 = 0;     // 1=OUTput,  0=INput
     //  GpioDataRegs.GPACLEAR.bit.GPIO29 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPASET.bit.GPIO29 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-30 - PIN FUNCTION = --Spare--
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO30 = 0;    // 0=GPIO,  1=CANRX-A,  2=Resv,  3=Resv
-//    GpioCtrlRegs.GPADIR.bit.GPIO30 = 0;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO30 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPASET.bit.GPIO30 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-31 - PIN FUNCTION = LED2 on controlCARD
-//    GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 0;    // 0=GPIO,  1=CANTX-A,  2=Resv,  3=Resv
-//    GpioCtrlRegs.GPADIR.bit.GPIO31 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPACLEAR.bit.GPIO31 = 1;   // uncomment if --> Set Low initially
-//    GpioDataRegs.GPASET.bit.GPIO31 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-32 - PIN FUNCTION = I2CSDA
-//    GpioCtrlRegs.GPBMUX1.bit.GPIO32 = 1;    // 0=GPIO,  1=I2CSDA-A,  2=SYNCI,  3=ADCSOCA
-//    //  GpioCtrlRegs.GPBDIR.bit.GPIO32 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPBCLEAR.bit.GPIO32 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPBSET.bit.GPIO32 = 1;     // uncomment if --> Set High initially
-//    //--------------------------------------------------------------------------------------
-//    //  GPIO-33 - PIN FUNCTION = PFC-DrvEnable
-//    GpioCtrlRegs.GPBMUX1.bit.GPIO33 = 1;    // 0=GPIO,  1=I2CSCL-A,  2=SYNCO,  3=ADCSOCB
-//    //  GpioCtrlRegs.GPBDIR.bit.GPIO33 = 1;     // 1=OUTput,  0=INput
-//    //  GpioDataRegs.GPBCLEAR.bit.GPIO33 = 1;   // uncomment if --> Set Low initially
-//    //  GpioDataRegs.GPBSET.bit.GPIO33 = 1;     // uncomment if --> Set High initially   //--------------------------------------------------------------------------------------                                                                                          
+    //    //--------------------------------------------------------------------------------------
     //  GPIO-34 - PIN FUNCTION = LED3 on controlCARD
     GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=Resv
     GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;     // 1=OUTput,  0=INput
@@ -851,68 +711,6 @@ static int32_t device_initGPIO(void)
 static int32_t device_initGPIO3phInterleaved(void)
 {
     return NO_ERROR;
-}
-
-//void updateDutyEPwm(uint16_t duty)
-//{
-//    EPwm1Regs.CMPA.half.CMPA = duty;
-//    EPwm2Regs.CMPA.half.CMPA = duty;
-//    EPwm3Regs.CMPA.half.CMPA = duty;
-//}
-
-
-// interrupt routine for led blinking
-__interrupt void cpu_timer0_isr(void)
-{
-    CpuTimer0.InterruptCount++;
-    GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1; // Toggle GPIO34 once per 500 milliseconds
-
-    // Acknowledge this interrupt to receive more interrupts from group 1
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-}
-
-// interrupt routine for led blinking
-__interrupt void cpu_timer1_isr(void)
-{
-    extern uint16_t Timer1IntFlg;
-
-    Timer1IntFlg = 1;
-    // The CPU acknowledges the interrupt.
-}
-
-__interrupt void AdcInterruptISR(void) {
-    GpioDataRegs.GPASET.bit.GPIO18 = 1;
-
-
-    GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;
-
-    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-    return;
-}
-
-
-///* Error handling function to be called when an ASSERT is violated */
-//void __error__(char *filename, uint32_t line)
-//{
-//    //
-//    // An ASSERT condition was evaluated as false. You can use the filename and
-//    // line parameters to determine what went wrong.
-//    //
-//    ESTOP0;
-//}
-
-
-__interrupt void ISR_ILLEGAL(void)   // Illegal operation TRAP
-{
-    // Insert ISR Code here
-    //TODO: all gate drivers off
-
-    // Next two lines for debug only to halt the processor here
-    // Remove after inserting ISR Code
-    asm("          ESTOP0");
-    for(;;);
-
 }
 
 static int32_t device_initADC(void)
@@ -1063,4 +861,90 @@ static int32_t device_initCLA(void)
     EDIS;
 
     return NO_ERROR;
+}
+
+// interrupt routine for led blinking
+__interrupt void cpu_timer0_isr(void)
+{
+    CpuTimer0.InterruptCount++;
+    // Acknowledge this interrupt to receive more interrupts from group 1
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+// interrupt routine for led blinking
+__interrupt void cpu_timer1_isr(void)
+{
+    extern uint16_t Timer1IntFlg;
+    extern float new_Vout;
+    extern uint32_t max_Vout_step;
+    extern float cla_VoutU;
+    extern float cla_VrefU;
+    int16_t direction = 1;
+    float abs_dv = 0;
+
+
+    CpuTimer1.InterruptCount++;
+    GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1; // Toggle GPIO34 once per 500 milliseconds
+
+    if (new_Vout <= cla_VoutU)
+        direction = -1;
+    else
+        direction = 1;
+
+    abs_dv=(ABS(new_Vout-cla_VoutU));
+
+    if ( abs_dv > max_Vout_step)
+    {
+        cla_VrefU = (float)((cla_VoutU + max_Vout_step*direction));
+        cla_VrefV = (float)((cla_VoutV + max_Vout_step*direction));
+        cla_VrefW = (float)((cla_VoutW + max_Vout_step*direction));
+    }
+    else
+    {
+        cla_VrefU = new_Vout;
+        cla_VrefV = new_Vout;
+        cla_VrefW = new_Vout;
+    }
+
+    // Clear INT flag for this timer
+    EPwm1Regs.ETCLR.bit.INT = 1;
+    // Acknowledge this interrupt to receive more interrupts from group 1
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+__interrupt void AdcInterruptISR(void) {
+    GpioDataRegs.GPASET.bit.GPIO18 = 1;
+    GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+    return;
+}
+
+/* sciaRXFIFOISR - SCIA Receive FIFO ISR */
+__interrupt void sciaRXISR(void)
+{
+    extern ringbuffer_t SCIARXBufferStruct;
+    uint16_t data;
+
+    /* Read data from RX FIFO */
+    data = SciaRegs.SCIRXBUF.all;
+    /* Write data to ring buffer */
+    ringbuffer_put(&SCIARXBufferStruct, data);
+
+    SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
+    SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
+
+    PieCtrlRegs.PIEACK.all|=0x100;       // Issue PIE ack
+}
+
+__interrupt void ISR_ILLEGAL(void)   // Illegal operation TRAP
+{
+    // Insert ISR Code here
+    //TODO: all gate drivers off
+
+    // Next two lines for debug only to halt the processor here
+    // Remove after inserting ISR Code
+    asm("          ESTOP0");
+    for(;;);
+
 }

@@ -7,7 +7,7 @@
 
 #include "I_Controller.h"
 
-void init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, float max)
+void init_I_CONTROLLER(I_CONTROLLER *cntl, float32_t V_i, float32_t V_r, float32_t min, float32_t max)
 {
     cntl->Vi =V_i;       //!< Integral Gain
     cntl->Vr =V_r;       //!< Gain from Feedback (Saturation)
@@ -19,7 +19,7 @@ void init_I_CONTROLLER(I_CONTROLLER *cntl, float V_i, float V_r, float min, floa
     cntl->sat_max = max;  //!< Upper saturation limit
 }
 
-float run_I_CONTROLLER(I_CONTROLLER *cntl, float ref, float value)
+float32_t run_I_CONTROLLER(I_CONTROLLER *cntl, float32_t ref, float32_t value)
 {
     cntl->u = ref - value;
     cntl->e = cntl->ys - cntl->y;
