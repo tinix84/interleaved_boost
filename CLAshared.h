@@ -42,7 +42,8 @@ extern uint32_t actual_duty_cnt;
 extern float min_duty_f;
 
 extern DCL_PID pid1_Volt;
-extern I_CONTROLLER pi1_Volt;
+//extern I_CONTROLLER pi1_Volt;
+extern PI_CONTROLLER pi1_Volt;
 
 extern float cla_CC_Ki;
 extern float cla_CC_Kr;

@@ -83,11 +83,12 @@ __interrupt void Cla1Task8 ( void )
 //    pi1_Volt.i10 = 0.0f;
 //    pi1_Volt.i6 = 1.0f;
 
-     cla_CC_Ki = 0.0005f;
-     cla_CC_Kr = 0.0f;
+     //cla_CC_Kp = 0.0f;
+     cla_CC_Ki = 0.000001f;
+     cla_CC_Kr = 0.01f;
 
      init_I_CONTROLLER(&pi1_Volt, cla_CC_Ki, cla_CC_Kr, 0.167f, 0.615f);
-
+     //init_PI_CONTROLLER(&pi1_Volt, cla_CC_Kp, cla_CC_Ki, cla_CC_Kr, 0.167f, 0.615f);
 }
 
 

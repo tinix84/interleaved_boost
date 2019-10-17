@@ -31,9 +31,22 @@ typedef volatile struct {
     float32_t sat_max;  //!< Upper saturation limit
 } I_CONTROLLER;
 
+typedef volatile struct {
+    float32_t Vi;       //!< Integral Gain
+    float32_t Vp;       //!< Proportional Gain
+    float32_t Vr;       //!< Gain from Feedback (Saturation)
+    float32_t u;        //!< Input
+    float32_t e;        //!< Saturation Difference
+    float32_t y;        //!< unsaturated Output
+    float32_t y1;       //!< old output value
+    float32_t ys;       //!< saturated Output
+    float32_t sat_min;  //!< Lower saturation limit
+    float32_t sat_max;  //!< Upper saturation limit
+} PI_CONTROLLER;
+
 //! \brief          Defines default values to initialise the DCL_PID structure
 //!
-#define I_DEFAULTS {0.1f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 20.0f}
+#define I_DEFAULTS {0.1f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 20.0f}
 
 //! \brief          Executes an inline ideal form PID controller on the FPU32
 //! \param[in] cntl    Pointer to the DCL_PID structure
@@ -45,6 +58,9 @@ float32_t run_I_CONTROLLER(I_CONTROLLER *cntl, float32_t ref, float32_t value);
 
 void  init_I_CONTROLLER(I_CONTROLLER *cntl, float32_t V_i, float32_t V_r, float32_t min, float32_t max);
 
+float32_t run_PI_CONTROLLER(PI_CONTROLLER *cntl, float32_t ref, float32_t value);
+
+void  init_PI_CONTROLLER(PI_CONTROLLER *cntl, float32_t V_p, float32_t V_i, float32_t V_r, float32_t min, float32_t max);
 
 /**
  * Macro to calculate a integral controller

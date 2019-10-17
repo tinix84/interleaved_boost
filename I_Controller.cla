@@ -19,12 +19,41 @@ void init_I_CONTROLLER(I_CONTROLLER *cntl, float32_t V_i, float32_t V_r, float32
     cntl->sat_max = max;  //!< Upper saturation limit
 }
 
+void init_PI_CONTROLLER(PI_CONTROLLER *cntl, float32_t V_p, float32_t V_i, float32_t V_r, float32_t min, float32_t max)
+{
+    cntl->Vi =V_i;       //!< Integral Gain
+    cntl->Vp =V_p;       //!< Proportional Gain
+    cntl->Vr =V_r;       //!< Gain from Feedback (Saturation)
+    cntl->u = 0;        //!< Input
+    cntl->e = 0;        //!< Saturation Difference
+    cntl->y = 0;        //!< unsaturated Output
+    cntl->ys = 0;       //!< saturated Output
+    cntl->sat_min = min;  //!< Lower saturation limit
+    cntl->sat_max = max;  //!< Upper saturation limit
+}
+
+
 float32_t run_I_CONTROLLER(I_CONTROLLER *cntl, float32_t ref, float32_t value)
 {
     cntl->u = ref - value;
     cntl->e = cntl->ys - cntl->y;
 
     cntl->y = cntl->y1 + cntl->Vi * cntl->u + cntl->Vr * cntl->e;
+
+    cntl->ys = __mmaxf32(cntl->y, cntl->sat_min);
+    cntl->ys = __mminf32(cntl->ys, cntl->sat_max);
+
+    cntl->y1 = cntl->y;
+
+    return cntl->ys;
+}
+
+float32_t run_PI_CONTROLLER(PI_CONTROLLER *cntl, float32_t ref, float32_t value)
+{
+    cntl->u = ref - value;
+    cntl->e = cntl->ys - cntl->y;
+
+    cntl->y = cntl->y1 + cntl->Vi * cntl->u + cntl->Vr * cntl->e + cntl->Vp * cntl->u;
 
     cntl->ys = __mmaxf32(cntl->y, cntl->sat_min);
     cntl->ys = __mminf32(cntl->ys, cntl->sat_max);
