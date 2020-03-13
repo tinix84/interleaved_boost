@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>ILBST_CLA_voltage</name>
+	<name>ILBST_CLA_28035</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -28,7 +28,7 @@
 		<link>
 			<name>F28035_CLA_C.cmd</name>
 			<type>1</type>
-			<locationURI>PROJECT_LOC/hal/DSP2803x_common/cmd/F28035_CLA_C.cmd</locationURI>
+			<locationURI>copy_PROJECT_LOC/hal/DSP2803x_common/cmd/F28035_CLA_C.cmd</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
@@ -47,6 +47,10 @@
 		<variable>
 			<name>ORIGINAL_PROJECT_ROOT</name>
 			<value>file:/C:/ti/controlSUITE/device_support/f2803x/v130/DSP2803x_examples_ccsv5/epwm_deadband</value>
+		</variable>
+		<variable>
+			<name>copy_PROJECT_LOC</name>
+			<value>$%7BPARENT-1-PROJECT_LOC%7D/ILBST_CLA_voltage</value>
 		</variable>
 	</variableList>
 </projectDescription>
