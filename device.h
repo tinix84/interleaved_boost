@@ -23,8 +23,8 @@
 #include "ringbuffer.h"
 
 #include "defines.h"
-#include "DSP2803x_Cla_typedefs.h"// DSP2803x CLA Type definitions
-#include "DSP2803x_Device.h"      // DSP2803x Headerfile Include File
+#include "F2806x_Cla_typedefs.h"// DSP2803x CLA Type definitions
+#include "F2806x_Device.h"      // DSP2803x Headerfile Include File
 
 // Functions that will be run from RAM need to be assigned to
 // a different section.  This section will then be mapped to a load and

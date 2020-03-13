@@ -10,9 +10,9 @@
 
 
 #include <stdint.h>
-#include "DSP2803x_Cla_typedefs.h"
-#include "DSP2803x_Cla_defines.h"
-#include "DSP2803x_Cla.h"
+#include "F2806x_Cla_typedefs.h"
+#include "F2806x_Cla_defines.h"
+#include "F2806x_Cla.h"
 
 #ifndef C2000_IEEE754_TYPES
 #define C2000_IEEE754_TYPES

@@ -13,9 +13,9 @@
 #ifndef CLA_SHARED_H_
 #define CLA_SHARED_H_
 
-#include "DSP2803x_Cla_typedefs.h"
-#include "DSP2803x_Cla_defines.h"
-#include "DSP2803x_Cla.h"
+#include "F2806x_Cla_typedefs.h"
+#include "F2806x_Cla_defines.h"
+#include "F2806x_Cla.h"
 #include "DCL.h"
 #include "I_Controller.h"
 

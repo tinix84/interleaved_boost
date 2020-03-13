@@ -5,13 +5,13 @@
 /* ========================== include files =========================== */
 /* ==================================================================== */
 
-#include "DSP2803x_Cla_typedefs.h"              // DSP2803x CLA Type definitions
-#include "DSP2803x_Device.h"                    //DSP2803x Headerfile Include File
-#include "DSP2803x_GlobalPrototypes.h"          // Prototypes for global functions within the
+#include "F2806x_Cla_typedefs.h"              // DSP2803x CLA Type definitions
+#include "F2806x_Device.h"                    //DSP2803x Headerfile Include File
+#include "F2806x_GlobalPrototypes.h"          // Prototypes for global functions within the
                                                 // .c files.
-#include "DSP2803x_EPwm_defines.h"             // Macros used for PWM examples.
-#include "DSP2803x_I2c_defines.h"              // Macros used for I2C examples.
-#include "DSP2803x_Cla_defines.h"              // Macros used for CLA examples.
+#include "F2806x_EPwm_defines.h"             // Macros used for PWM examples.
+#include "F2806x_I2c_defines.h"              // Macros used for I2C examples.
+#include "F2806x_Cla_defines.h"              // Macros used for CLA examples.
 
 
 /* ==================================================================== */
@@ -42,11 +42,10 @@
 
 // Include files not used with DSP/BIOS
 #ifndef DSP28_BIOS
-#include "DSP2803x_DefaultISR.h"
+#include "F2806x_DefaultISR.h"
 #endif
 
-// DO NOT MODIFY THIS LINE.
-#define DELAY_US(A)  DSP28x_usDelay(((((long double) A * 1000.0L) / (long double)CPU_RATE) - 9.0L) / 5.0L)
+
 
 /* Compilation define */
 #define INCR_BUILD 0
@@ -83,6 +82,9 @@
 //#define CPU_RATE   20.000L   // for a 50MHz CPU clock speed  (SYSCLKOUT)
 //#define CPU_RATE   25.000L   // for a 40MHz CPU clock speed  (SYSCLKOUT)
 //#define CPU_RATE   33.333L   // for a 30MHz CPU clock speed  (SYSCLKOUT)
+// DO NOT MODIFY THIS LINE.
+#define DELAY_US(A)  DSP28x_usDelay(((((long double) A * 1000.0L) / (long double)CPU_RATE) - 9.0L) / 5.0L)
+
 #define DEVICE_SYSCLK_FREQ 60000000U
 
 /* EPWM control defines */

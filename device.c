@@ -1,7 +1,7 @@
 /* =====================================================================*/
 /* Program: device.c                                                    */
 /*                                                                      */
-/* Project: PV-Batteriewechselrichter                                   */
+/* Project:                                                             */
 /*                                                                      */
 /* Description: Hardware driver                                         */
 /*                                                                      */
@@ -24,10 +24,10 @@
 #include "defines.h"
 //#include "ringbuffer.h"
 
-#include "DSP2803x_Cla_typedefs.h"// DSP2803x CLA Type definitions
-#include "DSP2803x_Device.h"      // DSP2803x Headerfile Include File
+#include "F2806x_Cla_typedefs.h"// DSP2803x CLA Type definitions
+#include "F2806x_Device.h"      // DSP2803x Headerfile Include File
 #include "CLAShared.h"
-#include "DSP2803x_Adc.h"
+#include "F2806x_Adc.h"
 
 /* ==================================================================== */
 /* ============================ constants ============================= */
@@ -121,7 +121,6 @@ int32_t device_init(void)
     device_initCPUTimer();
 
     /* Init watchdog */
-    // device_initWatchdog();
 
     /* Initialize all peripherals */
     device_initSCI();
@@ -213,17 +212,6 @@ static int32_t device_initCPUTimer(void)
     CpuTimer1Regs.TCR.bit.TIE = 1;
     CpuTimer2Regs.TCR.bit.TIE = 1;
 
-//    // Set pre-scale counter to divide by 1 (SYSCLKOUT):
-//    CpuTimer2Regs.TPR.all  = 0;
-//    CpuTimer2Regs.TPRH.all  = 0;
-//
-//    // Initialize timer control register:
-//    CpuTimer2Regs.TCR.bit.TSS = 1;      // 1 = Stop timer, 0 = Start/Restart Timer
-//    CpuTimer2Regs.TCR.bit.TRB = 1;      // 1 = reload timer
-//    CpuTimer2Regs.TCR.bit.SOFT = 0;
-//    CpuTimer2Regs.TCR.bit.FREE = 0;     // Timer Free Run Disabled
-//    CpuTimer2Regs.TCR.bit.TIE = 1;      // 0 = Disable/ 1 = Enable Timer Interrupt
-//    CpuTimer2Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
     EDIS;
 
     return NO_ERROR;
