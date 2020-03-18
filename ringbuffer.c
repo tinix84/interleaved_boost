@@ -9,10 +9,7 @@
  *
  */
 
-//#include "ringbuffer.h"
-
 #include "ringbuffer.h"
-//#include "device.h"
 
 int32_t ringbuffer_reset(ringbuffer_t * rbuf);
 int32_t ringbuffer_put(ringbuffer_t * rbuf, uint16_t data);

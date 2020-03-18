@@ -42,10 +42,10 @@ void InitAdc(void)
     // See the device data manual and/or the ADC Reference
     // Manual for more information.
 
-        EALLOW;
-        SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1;
-        (*Device_cal)();
-        EDIS;
+    EALLOW;
+    SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1;
+    (*Device_cal)();
+    EDIS;
 
     // To powerup the ADC the ADCENCLK bit should be set first to enable
     // clocks, followed by powering up the bandgap, reference circuitry, and ADC core.
@@ -69,12 +69,12 @@ void InitAdc(void)
 void InitAdcAio()
 {
 
-   EALLOW;
+    EALLOW;
 
-/* Configure ADC pins using AIO regs*/
-// This specifies which of the possible AIO pins will be Analog input pins.
-// NOTE: AIO1,3,5,7-9,11,13,15 are analog inputs in all AIOMUX1 configurations.
-// Comment out other unwanted lines.
+    /* Configure ADC pins using AIO regs*/
+    // This specifies which of the possible AIO pins will be Analog input pins.
+    // NOTE: AIO1,3,5,7-9,11,13,15 are analog inputs in all AIOMUX1 configurations.
+    // Comment out other unwanted lines.
 
     GpioCtrlRegs.AIOMUX1.bit.AIO2 = 2;    // Configure AIO2 for A2 (analog input) operation
     GpioCtrlRegs.AIOMUX1.bit.AIO4 = 2;    // Configure AIO4 for A4 (analog input) operation
@@ -94,7 +94,7 @@ void InitAdcAio()
    function calls two other functions:
    - AdcChanSelect(channel) – selects the ADC channel to convert
    - AdcConversion() – initiates several ADC conversions and returns the average
-*/
+ */
 void AdcOffsetSelfCal()
 {
     Uint16 AdcConvMean;
@@ -112,7 +112,7 @@ void AdcOffsetSelfCal()
 /*  AdcChanSelect-
     This function selects the ADC channel to convert by setting all SOC channel selects to a single channel.
 
-     * IMPORTANT * This function will overwrite previous SOC channel select settings. Recommend saving
+ * IMPORTANT * This function will overwrite previous SOC channel select settings. Recommend saving
            the previous settings.
  */
 void AdcChanSelect(Uint16 ch_no)
@@ -139,8 +139,8 @@ void AdcChanSelect(Uint16 ch_no)
    This function initiates several ADC conversions and returns the average. It uses ADCINT1 and ADCINT2
    to "ping-pong" between SOC0-7 and SOC8-15 and is referred to as "ping-pong" sampling.
 
-     * IMPORTANT * This function will overwrite previous ADC settings. Recommend saving previous settings.
-*/
+ * IMPORTANT * This function will overwrite previous ADC settings. Recommend saving previous settings.
+ */
 Uint16 AdcConversion(void)
 {
     Uint16 index, SampleSize, Mean, ACQPS_Value;

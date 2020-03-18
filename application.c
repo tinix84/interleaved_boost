@@ -56,11 +56,12 @@ int32_t application_init(void)
     /* Initialize variable of application code. */
     if (err == NO_ERROR)
     {
+
         //Here each FSM is init
-        actual_duty_cnt = EPwm1Regs.CMPA.half.CMPA;
-        actual_phdly_cnt = EPwm1Regs.TBPHS.half.TBPHS;
-        actual_pwm_period = EPwm1Regs.TBPRD;
-        actual_deadtime_cnt = EPwm1Regs.DBFED;
+        actual_duty_cnt = EPWMx_INIT_CMPA;
+        actual_phdly_cnt = EPWMx_INIT_PHASE;
+        actual_pwm_period = EPWMx_INIT_PERIOD;
+        actual_deadtime_cnt = EPWMx_INIT_DEADBAND;
     }
 
     /* Error handler for the above */
@@ -210,7 +211,16 @@ int32_t application_processFrame(commSerialFrame_t *frame)
              ******************************************************************
              */
         case setFrequency:
-            //TODO: EPwm1Regs.TBPRD
+#ifdef INVERTEDPOWER
+            new_pwm_period = (EPWM_A_INIT_PERIOD*25/data_address_p[0]);
+            EPwm1Regs.TBPRD = (uint16_t) new_pwm_period;
+            EPwm2Regs.TBPRD = (uint16_t) new_pwm_period;
+            new_duty_cnt = (actual_duty_cnt*new_pwm_period/actual_pwm_period);
+            EPwm1Regs.CMPB = (uint16_t)new_duty_cnt; // adjust duty for output EPWM1A
+            EPwm2Regs.CMPB = (uint16_t)new_duty_cnt; // adjust duty for output EPWM2A
+            new_phdly_cnt = new_pwm_period;
+            EPwm2Regs.TBPHS.half.TBPHS = new_phdly_cnt;
+#else
             new_pwm_period = (EPWM_A_INIT_PERIOD*25/data_address_p[0]);
             EPwm1Regs.TBPRD = (uint16_t) new_pwm_period;
             EPwm2Regs.TBPRD = (uint16_t) new_pwm_period;
@@ -219,16 +229,21 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             EPwm2Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt; // adjust duty for output EPWM2A
             new_phdly_cnt = new_pwm_period;
             EPwm2Regs.TBPHS.half.TBPHS = new_phdly_cnt;
+#endif
             actual_duty_cnt = new_duty_cnt;
             actual_pwm_period = new_pwm_period;
             actual_phdly_cnt = new_phdly_cnt;
-
             break;
 
         case setDuty:
             new_duty_cnt = (uint32_t)(data_address_p[0])*actual_pwm_period/100;
+#ifdef INVERTEDPOWER
+            EPwm1Regs.CMPB = (uint16_t)new_duty_cnt;
+            EPwm2Regs.CMPB = (uint16_t)new_duty_cnt;
+#else
             EPwm1Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt;
             EPwm2Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt;
+#endif
             actual_duty_cnt = new_duty_cnt;
             break;
 

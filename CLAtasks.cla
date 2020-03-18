@@ -31,7 +31,7 @@ __interrupt void Cla1Task1 ( void )
     cla_VoutV = ((float)AdcResult.ADCRESULT8)*0.2203856749; // B6 - Vfb_V
     cla_VoutW = ((float)AdcResult.ADCRESULT6)*0.2203856749; // B4 - Vfb_W
 
-#if (INCR_BUILD == 1)
+#if (CLOSE_LOOP == 1)
     cla_Ramp_Volt = run_I_CONTROLLER(&pi1_Volt, cla_VrefW, cla_VoutW);
     min_duty_f = (float)actual_pwm_period*(1-cla_Ramp_Volt);
 

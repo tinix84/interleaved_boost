@@ -66,24 +66,5 @@ typedef struct __array4{
 extern int32_t application_init(void);
 extern int32_t application_serialHandler(void);
 
-
-/*
- ****************************************************************************
- * General setter and getter functions
- ****************************************************************************
- */
-
-
-/*
- ****************************************************************************
- * Auxiliary functions
- ****************************************************************************
- */
-static inline int32_t application_blink(void)
-{
-    GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1;
-    return 0;
-}
-
 #endif /* APPLICATION_H_ */
 
