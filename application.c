@@ -5,21 +5,29 @@
  *      Author: tinivella
  */
 #include <stdint.h>
-
 #include "application.h"
 
 
 
-/* Private functions */
-/* Initialization functions */
+/*
+ * Private functions
+ */
+
+/*
+ * Initialization functions
+ */
 static int32_t application_initSerial(void);
 
-/* Serial driver functions */
+/*
+ * Serial driver functions
+ */
 static int32_t application_processFrame(commSerialFrame_t *frame);
 static int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame);
 static int32_t application_putFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame);
 
-/* Miscellaneous functions */
+/*
+ * Miscellaneous functions
+ */
 
 /*
  * Initialization sequence for the control module.
@@ -48,11 +56,12 @@ int32_t application_init(void)
     /* Initialize variable of application code. */
     if (err == NO_ERROR)
     {
+
         //Here each FSM is init
-        actual_duty_cnt = EPwm1Regs.CMPA.half.CMPA;
-        actual_phdly_cnt = EPwm1Regs.TBPHS.half.TBPHS;
-        actual_pwm_period = EPwm1Regs.TBPRD;
-        actual_deadtime_cnt = EPwm1Regs.DBFED;
+        actual_duty_cnt = EPWMx_INIT_CMPA;
+        actual_phdly_cnt = EPWMx_INIT_PHASE;
+        actual_pwm_period = EPWMx_INIT_PERIOD;
+        actual_deadtime_cnt = EPWMx_INIT_DEADBAND;
     }
 
     /* Error handler for the above */
@@ -131,10 +140,6 @@ int32_t application_serialHandler(void)
     return status;
 }
 
-
-
-
-
 /*
  * Frame processing
  *
@@ -146,12 +151,15 @@ int32_t application_processFrame(commSerialFrame_t *frame)
     extern uint32_t actual_pwm_period;
     extern uint32_t actual_phdly_cnt;
     extern uint32_t actual_deadtime_cnt;
-    extern uint32_t foo2;
+    extern uint32_t new_deadtime_ns;
+    extern float cla_Vref1;
+    extern uint32_t new_Vout;
 
     uint32_t new_duty_cnt = 0;
     uint32_t new_pwm_period = 0;
     uint32_t new_phdly_cnt = 0;
     uint32_t new_deadtime_cnt = 0;
+
 
     array4 temp_4;
     uint16_t data_offset = 0;
@@ -203,7 +211,16 @@ int32_t application_processFrame(commSerialFrame_t *frame)
              ******************************************************************
              */
         case setFrequency:
-            //TODO: EPwm1Regs.TBPRD
+#ifdef INVERTEDPOWER
+            new_pwm_period = (EPWM_A_INIT_PERIOD*25/data_address_p[0]);
+            EPwm1Regs.TBPRD = (uint16_t) new_pwm_period;
+            EPwm2Regs.TBPRD = (uint16_t) new_pwm_period;
+            new_duty_cnt = (actual_duty_cnt*new_pwm_period/actual_pwm_period);
+            EPwm1Regs.CMPB = (uint16_t)new_duty_cnt; // adjust duty for output EPWM1A
+            EPwm2Regs.CMPB = (uint16_t)new_duty_cnt; // adjust duty for output EPWM2A
+            new_phdly_cnt = new_pwm_period;
+            EPwm2Regs.TBPHS.half.TBPHS = new_phdly_cnt;
+#else
             new_pwm_period = (EPWM_A_INIT_PERIOD*25/data_address_p[0]);
             EPwm1Regs.TBPRD = (uint16_t) new_pwm_period;
             EPwm2Regs.TBPRD = (uint16_t) new_pwm_period;
@@ -212,27 +229,36 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             EPwm2Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt; // adjust duty for output EPWM2A
             new_phdly_cnt = new_pwm_period;
             EPwm2Regs.TBPHS.half.TBPHS = new_phdly_cnt;
+#endif
             actual_duty_cnt = new_duty_cnt;
             actual_pwm_period = new_pwm_period;
             actual_phdly_cnt = new_phdly_cnt;
-
             break;
 
         case setDuty:
             new_duty_cnt = (uint32_t)(data_address_p[0])*actual_pwm_period/100;
+#ifdef INVERTEDPOWER
+            EPwm1Regs.CMPB = (uint16_t)new_duty_cnt;
+            EPwm2Regs.CMPB = (uint16_t)new_duty_cnt;
+#else
             EPwm1Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt;
             EPwm2Regs.CMPA.half.CMPA = (uint16_t)new_duty_cnt;
+#endif
             actual_duty_cnt = new_duty_cnt;
             break;
 
         case setDeadtime:
-            foo2 = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
-            new_deadtime_cnt = (uint32_t)( foo2 / EPWM_CLK_PERIOD_NS);
+            new_deadtime_ns = ((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
+            new_deadtime_cnt = (uint32_t)( new_deadtime_ns / EPWM_CLK_PERIOD_NS);
             EPwm1Regs.DBFED = (uint16_t)new_deadtime_cnt;
             EPwm1Regs.DBRED = (uint16_t)new_deadtime_cnt;
             EPwm2Regs.DBFED = (uint16_t)new_deadtime_cnt;; // FED = 20 TBCLKs
             EPwm2Regs.DBRED = (uint16_t)new_deadtime_cnt;; // RED = 20 TBCLKs
             actual_deadtime_cnt = new_deadtime_cnt;
+            break;
+
+        case setOutputVoltage:
+            new_Vout = (float)((uint32_t)data_address_p[0]+256*(uint32_t)data_address_p[1]);
             break;
 
         case enablePhaseAll:
@@ -275,6 +301,15 @@ int32_t application_processFrame(commSerialFrame_t *frame)
             device_driverDisableVHS();
             break;
 
+        case disableV:
+            device_driverDisableVLS();
+            device_driverDisableVHS();
+            break;
+
+        case disableU:
+            device_driverDisableULS();
+            device_driverDisableUHS();            
+            break;
 
             /*
              ******************************************************************
@@ -321,6 +356,9 @@ int32_t application_processFrame(commSerialFrame_t *frame)
     return 0;
 }
 
+/*
+ * TBD
+ */
 int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame)
 {
     extern commFrameStates_e rxstate;
@@ -437,7 +475,6 @@ int32_t application_getFrame(ringbuffer_t *rbuf, commSerialFrame_t *frame)
 
     return ret;
 }
-
 
 /*
  * Decode complete frame into ringbuffer.

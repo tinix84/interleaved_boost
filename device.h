@@ -12,12 +12,8 @@
 /* ==================================================================== */
 /*    (c) 2018 by Interstaatliche Hochschule für Technik Buchs NTB      */
 /* ==================================================================== */
-
-
 #ifndef DEVICE_H
 #define DEVICE_H
-
-
 
 
 /* ==================================================================== */
@@ -25,7 +21,7 @@
 /* ==================================================================== */
 #include <stdint.h>
 #include "ringbuffer.h"
-//#include "stdbool.h"
+
 #include "defines.h"
 #include "DSP2803x_Cla_typedefs.h"// DSP2803x CLA Type definitions
 #include "DSP2803x_Device.h"      // DSP2803x Headerfile Include File
@@ -40,19 +36,21 @@
 /* ==================================================================== */
 /* ============================ constants ============================= */
 /* ==================================================================== */
-
 /* #define and enum statements go here */
+#define CLARAM0_ENABLE  1
+#define CLARAM1_ENABLE  1
+
 
 /* ==================================================================== */
 /* ========================== public data ============================= */
 /* ==================================================================== */
-
 /* Definition of public (external) data types go here */
 
 /* ==================================================================== */
 /* ======================= public functions =========================== */
 /* ==================================================================== */
 
+//microprocessor public functions
 extern int32_t device_init(void);
 extern void updateDutyEPwm(uint16_t duty);
 
@@ -61,132 +59,7 @@ extern void updateDutyEPwm(uint16_t duty);
 /* =================== public inline functions ======================== */
 /* ==================================================================== */
 
-extern inline int32_t device_ePWMSetPeriodAll(uint16_t count)
-{
-//    EPWM_setTimeBasePeriod(EPWM_GRID_1_BASE, count);
-//    EPWM_setTimeBasePeriod(EPWM_GRID_2_BASE, count);
-    return 0;
-}
-
-/*
- * Enable  ePWM outputs.
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMEnablePhaseU(void)
-{
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-    return 0;
-}
-
-/*
- * Enable Phase V ePWM outputs.
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMEnablePhaseV(void)
-{
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-    return 0;
-}
-
-
-/*
- * Enable Phase V ePWM outputs.
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMEnablePhaseAll(void)
-{
-//    device_ePWMEnablePhaseV(void);
-//    device_ePWMEnablePhaseW(void);
-    return 0;
-}
-
-/*
- * Enable  ePWM outputs.
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMDisablePhaseU(void)
-{
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-    return 0;
-}
-
-/*
- * Enable Phase V ePWM outputs.
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMDisablePhaseV(void)
-{
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_A_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-//    /* Remove Action Qualifier continuous software force */
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_A,
-//                                             EPWM_AQ_SW_DISABLED);
-//    EPWM_setActionQualifierContSWForceAction(EPWM_PV2_B_BASE, EPWM_AQ_OUTPUT_B,
-//                                             EPWM_AQ_SW_DISABLED);
-    return 0;
-}
-
-
-
-
-
-/*
- * !!Use this for testing only!!
- * Registers are loaded on counter period.
- */
-extern inline int32_t device_ePWMEnableAll(void)
-{
-//    device_ePWMEnablePhaseV(void);
-//    device_ePWMEnablePhaseU(void);
-    return 0;
-}
-
-extern inline int32_t device_ePWMDisableAll(void)
-{
-//    device_ePWMDisablePhaseV(void);
-//    device_ePWMDisablePhaseW(void);
-    return 0;
-}
-
-
-/*
- * Enable gate drivers for Phase U
- */
+/* Enable gate drivers for Phase U */
 extern inline int32_t device_driverEnableVLS(void)
 {
     GpioDataRegs.GPADAT.bit.GPIO11 = 0;
@@ -199,9 +72,7 @@ extern inline int32_t device_driverEnableVHS(void)
     return 0;
 }
 
-/*
- * Enable gate drivers for Phase V
- */
+/* Enable gate drivers for Phase V */
 extern inline int32_t device_driverEnableULS(void)
 {
     GpioDataRegs.GPADAT.bit.GPIO4 = 0;
@@ -214,9 +85,7 @@ extern inline int32_t device_driverEnableUHS(void)
     return 0;
 }
 
-/*
- * Enable gate drivers for Phase U
- */
+/* Enable gate drivers for Phase U */
 extern inline int32_t device_driverDisableVLS(void)
 {
     GpioDataRegs.GPADAT.bit.GPIO11 = 1;
@@ -229,9 +98,7 @@ extern inline int32_t device_driverDisableVHS(void)
     return 0;
 }
 
-/*
- * Enable gate drivers for Phase V
- */
+/* Enable gate drivers for Phase V */
 extern inline int32_t device_driverDisableULS(void)
 {
     GpioDataRegs.GPADAT.bit.GPIO4 = 1;

@@ -8,7 +8,6 @@
 #ifndef RINGBUFFER_H_
 #define RINGBUFFER_H_
 
-//#include "device.h"
 #include <stdint.h>
 
 typedef struct {
@@ -28,7 +27,6 @@ extern int32_t ringbuffer_full(ringbuffer_t * rbuf);
 extern int32_t ringbuffer_length(ringbuffer_t * rbuf);
 extern int32_t ringbuffer_data(ringbuffer_t * rbuf,
                                uint16_t *data, uint16_t pos);
-
 
 
 #endif /* RINGBUFFER_H_ */

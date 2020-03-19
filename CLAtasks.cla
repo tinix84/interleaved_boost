@@ -1,0 +1,96 @@
+//###########################################################################
+// Description:
+//
+// Task 1: Calculate the square root of a number using
+// multiple iterations of the Newton-Raphson approximation
+//
+//###########################################################################
+// $TI Release: F2803x C/C++ Header Files and Peripheral Examples V130 $
+// $Release Date: May  8, 2015 $
+// $Copyright: Copyright (C) 2009-2015 Texas Instruments Incorporated -
+//             http://www.ti.com/ ALL RIGHTS RESERVED $
+//###########################################################################
+
+#include "DSP28x_Project.h"
+// Include the test header file whose name is based on the test name
+// which is defined by the macro TEST on the command line
+//#include "DCL.h"
+#include <stdint.h>
+#include "CLAshared.h"
+#include "I_Controller.h"
+#include "defines.h"
+
+
+__interrupt void Cla1Task1 ( void )
+{
+
+    // voltage divider
+    // 9.1k/(4*620k+9.1k)=0.00365593989795508416696798039452
+    // 800V == 2.92475 == 3630 => 0.22038567493112947658402203856749 V/LSB
+    cla_VoutU = ((float)AdcResult.ADCRESULT9)*0.2203856749; // B7 - Vfb_U
+    cla_VoutV = ((float)AdcResult.ADCRESULT8)*0.2203856749; // B6 - Vfb_V
+    cla_VoutW = ((float)AdcResult.ADCRESULT6)*0.2203856749; // B4 - Vfb_W
+
+#if (CLOSE_LOOP == 1)
+    cla_Ramp_Volt = run_I_CONTROLLER(&pi1_Volt, cla_VrefW, cla_VoutW);
+    min_duty_f = (float)actual_pwm_period*(1-cla_Ramp_Volt);
+
+    //Variable = (Variable < MinValue) ? MinValue : Variable;
+    //min_duty_f = __mminf32(((float)actual_pwm_period*cla_Ramp_Volt),(float)actual_duty_cnt);
+    // adjust duty for output EPWM1A
+    EPwm1Regs.CMPA.half.CMPA = (uint16_t)min_duty_f;
+    // adjust duty for output EPWM2A
+    EPwm2Regs.CMPA.half.CMPA = (uint16_t)min_duty_f;
+#endif
+
+
+     cla_IoutU = AdcResult.ADCRESULT5; // B3 - Ifb_U
+     cla_IoutV = AdcResult.ADCRESULT7; // B5 - Ifb_V
+     cla_IoutW = AdcResult.ADCRESULT2; // A5 - Ifb_W
+//     clarke1.As= ((AdcResult.ADCRESULT1*0.000244140625)-0.501)*2;
+}
+
+__interrupt void Cla1Task2 ( void )
+{
+
+}
+__interrupt void Cla1Task3 ( void )
+{
+	
+}
+__interrupt void Cla1Task4 ( void )
+{
+	
+}
+__interrupt void Cla1Task5 ( void )
+{
+	
+}
+__interrupt void Cla1Task6 ( void )
+{
+	
+}
+__interrupt void Cla1Task7 ( void )
+{
+	
+}
+
+//Task 8 : init task
+__interrupt void Cla1Task8 ( void )
+{
+//    pi1_Volt.Kp = 0.00001f;
+//    pi1_Volt.Ki = 0.01f;
+//    pi1_Volt.Umax = 0.84f; //min duty 600Vout/500Vin->D=16.67%
+//    pi1_Volt.Umin = 0.40f; //max duty 780Vout/300Vin->D=61.5%
+//    pi1_Volt.i10 = 0.0f;
+//    pi1_Volt.i6 = 1.0f;
+
+     //cla_CC_Kp = 0.0f;
+     cla_CC_Ki = 0.000001f;
+     cla_CC_Kr = 0.01f;
+
+     init_I_CONTROLLER(&pi1_Volt, cla_CC_Ki, cla_CC_Kr, 0.167f, 0.615f);
+     //init_PI_CONTROLLER(&pi1_Volt, cla_CC_Kp, cla_CC_Ki, cla_CC_Kr, 0.167f, 0.615f);
+}
+
+

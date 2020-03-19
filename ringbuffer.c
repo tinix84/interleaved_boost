@@ -9,10 +9,7 @@
  *
  */
 
-//#include "ringbuffer.h"
-
 #include "ringbuffer.h"
-//#include "device.h"
 
 int32_t ringbuffer_reset(ringbuffer_t * rbuf);
 int32_t ringbuffer_put(ringbuffer_t * rbuf, uint16_t data);
@@ -54,7 +51,7 @@ int32_t ringbuffer_length(ringbuffer_t * rbuf)
     else
     {
         status = (((int16_t)rbuf->size - (int16_t)rbuf->tail) +
-                  (int16_t)rbuf->head);
+                (int16_t)rbuf->head);
     }
     return status;
 }

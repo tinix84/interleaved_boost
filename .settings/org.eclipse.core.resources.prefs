@@ -1,4 +1,14 @@
 eclipse.preferences.version=1
+encoding//Debug/DCL/source/subdir_rules.mk=UTF-8
+encoding//Debug/DCL/source/subdir_vars.mk=UTF-8
+encoding//Debug/hal/DSP2803x_common/lib/subdir_rules.mk=UTF-8
+encoding//Debug/hal/DSP2803x_common/lib/subdir_vars.mk=UTF-8
+encoding//Debug/hal/DSP2803x_common/source/subdir_rules.mk=UTF-8
+encoding//Debug/hal/DSP2803x_common/source/subdir_vars.mk=UTF-8
+encoding//Debug/hal/DSP2803x_headers/cmd/subdir_rules.mk=UTF-8
+encoding//Debug/hal/DSP2803x_headers/cmd/subdir_vars.mk=UTF-8
+encoding//Debug/hal/DSP2803x_headers/source/subdir_rules.mk=UTF-8
+encoding//Debug/hal/DSP2803x_headers/source/subdir_vars.mk=UTF-8
 encoding//Debug/makefile=UTF-8
 encoding//Debug/objects.mk=UTF-8
 encoding//Debug/sources.mk=UTF-8
