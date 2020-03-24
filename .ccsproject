@@ -3,6 +3,6 @@
 <projectOptions>
 	<deviceFamily value="C2000"/>
 	<isTargetManual value="false"/>
-	<origin value="D:/GitHub/ILBST_CLA"/>
+	<origin value="C:/Users/tinivella/workspace_v9/interleaved_boost"/>
 	<connection value="common/targetdb/connections/TIXDS100usb_Connection.xml"/>
 </projectOptions>

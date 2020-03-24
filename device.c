@@ -252,9 +252,9 @@ static int32_t device_initEPWM3phNIBBSpecialModulation(void)
     // Initialization Time
     //========================
     // EPWM Module 1 config
-    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND; // adjust duty for output EPWM1A
-    EPwm2Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
-    EPwm3Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+//    EPwm1Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND; // adjust duty for output EPWM1A
+//    EPwm2Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
+//    EPwm3Regs.CMPA.half.CMPA = EPWM_B_INIT_DEADBAND;
 
     EPwm1Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM1A
     EPwm2Regs.CMPB = EPWM_A_INIT_CMPA; // adjust duty for output EPWM2A
@@ -287,10 +287,15 @@ static int32_t device_initEPWM3phNIBBSpecialModulation(void)
     EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
     EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_CTR_CMPB;
 
-    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
-    EPwm1Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
-    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
-    EPwm2Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+//    EPwm1Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+//    EPwm1Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+//    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET; // every period set PWM
+//    EPwm2Regs.AQCTLA.bit.CBU = AQ_CLEAR ; //if PWMA=CMPA on rising edge disable PWM
+
+    EPwm1Regs.AQCTLA.bit.ZRO = AQ_CLEAR; // every period set PWM
+    EPwm1Regs.AQCTLA.bit.CBU = AQ_SET ; //if PWMA=CMPA on rising edge disable PWM
+    EPwm2Regs.AQCTLA.bit.ZRO = AQ_CLEAR; // every period set PWM
+    EPwm2Regs.AQCTLA.bit.CBU = AQ_SET ; //if PWMA=CMPA on rising edge disable PWM
 
     EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
     EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active Hi complementary
