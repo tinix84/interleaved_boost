@@ -30,15 +30,14 @@
 
 /* Compilation define */
 #define CLOSE_LOOP 0
-#define INVERTEDPOWER
-
+//#define INVERTEDPOWER
 
 /* System control define */
 ///* Specify the PLL control register (PLLCR) and divide select (DIVSEL) value.*/
 //#define DSP28_DIVSEL   2 // Enable /2 for SYSCLKOUT
 //#define DSP28_PLLCR   12    // Uncomment for 60 MHz devices [60 MHz = (10MHz * 12)/2]
 #define CPU_RATE   16.667L   // for a 60MHz CPU clock speed (SYSCLKOUT)
-#define DEVICE_SYSCLK_FREQ (60000000U/2)
+#define DEVICE_SYSCLK_FREQ (60000000U)
 
 /* EPWM control defines */
 #define INTERLEAVE 2 //interleave half the switching frequency
@@ -51,7 +50,8 @@
 #define CARRIER_FACTOR UPDOWN_FACTOR
 #endif
 
-#define EPWM_CLK_FREQ          DEVICE_SYSCLK_FREQ
+      // Clock ratio to SYSCLKOUT
+#define EPWM_CLK_FREQ          DEVICE_SYSCLK_FREQ //HSPCLKDIV = TB_DIV1; CLKDIV = TB_DIV1;
 #define EPWM_CLK_PERIOD_NS     (1000000000U / EPWM_CLK_FREQ)
 #define EPWM_PWM_DEAD_TIME_NS  500U
 #define EPWM_PWM_FREQ_25KHZ    25000U
@@ -59,14 +59,14 @@
 #define EPWM_PERIOD_COUNT_25KHZ (EPWM_CLK_FREQ / EPWM_PWM_FREQ_25KHZ)
 //#define EPWM_PERIOD_COUNT_25KHZ_F 4000.0f
 #define EPWM_COUNT_25KHZ_DUTY50 (EPWM_PERIOD_COUNT_25KHZ / 2U)
-#define EPWM_COUNT_25KHZ_DUTY25 (EPWM_PERIOD_COUNT_25KHZ / 4U)
+#define EPWM_COUNT_25KHZ_DUTY75 (EPWM_PERIOD_COUNT_25KHZ * 3U / 4U)
 
 #define EPWM_PWM_DEAD_TIME_COUNT (EPWM_PWM_DEAD_TIME_NS / EPWM_CLK_PERIOD_NS)
 
 /* EPWM defines for initialization, based on section 3.2.2.3 reference manual */
-#define EPWMx_INIT_PERIOD    (uint16_t)(EPWM_PERIOD_COUNT_25KHZ * CARRIER_FACTOR)
-#define EPWMx_INIT_PHASE     (uint16_t)(EPWM_PERIOD_COUNT_25KHZ * INTERLEAVE)
-#define EPWMx_INIT_CMPA      (uint16_t)(EPWM_COUNT_25KHZ_DUTY25 * CARRIER_FACTOR)
+#define EPWMx_INIT_PERIOD    (uint16_t)(EPWM_PERIOD_COUNT_25KHZ / CARRIER_FACTOR)
+#define EPWMx_INIT_PHASE     (uint16_t)(EPWM_PERIOD_COUNT_25KHZ / INTERLEAVE)
+#define EPWMx_INIT_CMPA      (uint16_t)(EPWM_COUNT_25KHZ_DUTY75 / CARRIER_FACTOR)
 #define EPWMx_INIT_DEADBAND  (uint16_t)(EPWM_PWM_DEAD_TIME_COUNT)
 
 #define EPWM_A_INIT_PERIOD       EPWMx_INIT_PERIOD
